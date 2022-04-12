@@ -199,9 +199,8 @@
 
 .legend{
   fill: black ;
-  font-size: 14px!important;
 }
-.tooltip {
+.tooltip{
   fill: #000000!important;
   font-size: 18px!important;
   font-weight: bold;
@@ -221,4 +220,9 @@
   background    : #7e7e7e;
   color         : #ffffff;
   pointer-events: none;
+}
+
+h5{
+  color: #282846;
+  font-size: 20px!important;
 }

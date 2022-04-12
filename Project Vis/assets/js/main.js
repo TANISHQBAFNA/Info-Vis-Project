@@ -4,8 +4,8 @@ currentheight = parseInt(d3.select('.circular-chart').style('height'), 10)
 
 
 var margin = {top: 0, right: 0, bottom: 0, left: 0},
-  width = currentWidth ,
-  height = currentheight ,
+  width = currentWidth + 90,
+  height = currentheight + 90,
   innerRadius = 40,
   outerRadius = Math.min(width, height) / 2;   // the outerRadius goes from the middle of the SVG area to the border
 
@@ -15,7 +15,7 @@ var svg = d3.select("body").select(".circular-chart").select(".row").select("#ci
   .attr("width", width )
   .attr("height", height )
   .append("g")
-  .attr("transform", "translate(" + width / 2 + "," + ( height/2+100 )+ ")")// Add 100 on Y translation, cause upper bars are longer
+  .attr("transform", "translate(" + width / 3 + "," + ( height/2+100 )+ ")")// Add 100 on Y translation, cause upper bars are longer
 
 d3.csv("assets/data/SVICounty.csv", function(data) {
 
@@ -41,16 +41,16 @@ d3.csv("assets/data/SVICounty.csv", function(data) {
     .append("path")
     .attr("fill", function (d){
       if(d.THEMES>0.75){
-        return "#ff3e50";
+        return "#F94144";
       }
       if(d.THEMES<=0.75 && d.THEMES>0.5 ){
-        return "#EDC951";
+        return "#F8961E";
       }
       if(d.THEMES<=0.5 && d.THEMES>0.25){
-        return "#00A0B0";
+        return "#F9C74F";
       }
       if(d.THEMES<=0.25){
-        return "#00b052";
+        return "#43AA8B";
       }
     })
     .attr("d", d3.arc()     // imagine your doing a part of a donut plot
@@ -60,14 +60,7 @@ d3.csv("assets/data/SVICounty.csv", function(data) {
       .endAngle(function(d) { return x(d.COUNTY) + x.bandwidth(); })
       .padAngle(0.01)
       .padRadius(innerRadius))
-    // .on("mouseover", function(d) {
-    //   //Bring back the hovered over blob
 
-    // })
-    // .on('mouseout', function(){
-    //   //Bring back all blobs
-
-    // })
     .on('mouseover', mouseover)
     .on('mousemove', mousemove)
     .on('mouseout', mouseout)
@@ -81,15 +74,10 @@ d3.csv("assets/data/SVICounty.csv", function(data) {
      }
    }
    // low level of vulnerability low to moderate level of vulnerability  a moderate to high level of vulnerability high level of vulnerability.
-
-   d3.select(".circular-chart").select(".row").select("#circular-info").select('.intro').select('div').selectAll('div').select('h5').select('#county-name').text(info[ind].County)
-   d3.select(".circular-chart").select(".row").select("#circular-info").select('.intro').select('div').selectAll('div').select('h5').select('#county-est').text(info[ind].Est)
-   d3.select(".circular-chart").select(".row").select("#circular-info").select('.intro').select('div').selectAll('div').select('h5').select('#county-origin').text(info[ind].Origin)
-   d3.select(".circular-chart").select(".row").select("#circular-info").select('.intro').select('div').selectAll('div').select('h5').select('#county-eth').text(info[ind].Etymology)
-   d3.select(".circular-chart").select(".row").select("#circular-info").select('.intro').select('div').selectAll('div').select('h5').select('#county-area').text(info[ind].Area)
-   d3.select(".circular-chart").select(".row").select("#circular-info").select('.intro').select('div').selectAll('div').select('h5').select('#county-population').text(info[ind].Population)
-   d3.select(".circular-chart").select(".row").select("#circular-info").select('.intro').select('div').select('.buttons').select('a').text("Explore SVI data for "+ info[ind].County)
-   d3.select(".circular-chart").select(".row").select("#circular-info").select('.intro').select('div').selectAll('div').select('h5').select('#county-vulnerability').text(function (){
+   d3.select(".circular-chart").select(".row").select('#radar-chart').selectAll('div').select('h5').select('#county-name').text(info[ind].County)
+   d3.select(".circular-chart").select(".row").select('#radar-chart').select('a').text("Explore SVI data for "+ info[ind].County + " County")
+   d3.select(".circular-chart").select(".row").select('#radar-chart').select('h2').text("County Information")
+   d3.select(".circular-chart").select(".row").select('#radar-chart').selectAll('div').select('h5').select('#county-vulnerability').text(function (){
      if(d.THEMES>0.75){
        return "High level of vulnerability";
      }
@@ -102,24 +90,22 @@ d3.csv("assets/data/SVICounty.csv", function(data) {
      if(d.THEMES<=0.25){
        return "Low level of vulnerability";
      }
-     d3.select(".circular-chart").select(".row").select("#circular-info").select('.intro').select('div').append("button")
-
      })
-   d3.select(".circular-chart").select(".row").select("#circular-info").select('.intro').select('div').selectAll('div').selectAll('h5').select('span')
+   d3.select(".circular-chart").select(".row").select('#radar-chart').selectAll('div').selectAll('h5').select('span')
      .style('color', function (){
        if(d.THEMES>0.75){
-         return "#ff3e50";
+         return "#F94144";
        }
        if(d.THEMES<=0.75 && d.THEMES>0.5 ){
-         return "#EDC951";
+         return "#F8961E";
        }
        if(d.THEMES<=0.5 && d.THEMES>0.25){
-         return "#00A0B0";
+         return "#F9C74F";
        }
        if(d.THEMES<=0.25){
-         return "#00b052";
+         return "#43AA8B";
        }
-     });
+     })
     })
       radar(d.COUNTY)
         .on('mouseover', mouseover)
