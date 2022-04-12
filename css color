@@ -1,1 +1,12 @@
-https://coolors.co/001219-005f73-0a9396-94d2bd-e9d8a6-ee9b00-ca6702-bb3e03-ae2012-9b2226
+  if (SVI > 0.75) {
+      return '#F94144';
+    }
+      if9SVI<=0.75 && SVI >0.5 ){
+        return "#F8961E";
+      }
+      if(SVI<=0.5 && SVI>0.25){
+        return "#F9C74F";
+      }
+      if(SVI<=0.25){
+        return "#43AA8B";
+      } })
