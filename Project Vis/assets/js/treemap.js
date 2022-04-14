@@ -1,10 +1,11 @@
-currentwidth2 = parseInt(d3.select('#tree-map').style('width'), 10)
-currentHeight2 = parseInt(d3.select('.tree-map').style('height'), 10)
+
 var url = 'assets/data/SVICategory.json';
+currentwidth2 = parseInt(d3.select('.tree-map').style('width'), 10)
+currentHeight2 = parseInt(d3.select('.tree-map').style('height'), 10)
 d3.json(url, function(data) {
   var width = currentwidth2,
     height = currentHeight2,
-    nodeRadius = 10;
+    nodeRadius = 12;
 
   var svg = d3.select('body').select(".tree-map").select(".row").select('#tree-map')
     .append('svg')
@@ -15,10 +16,10 @@ d3.json(url, function(data) {
 
   var radius = width;
   var mainGroup = svg.append('g')
-    .attr("transform", "translate(" + width/2.7 + "," + height/2.1 + ")");
+    .attr("transform", translater());
 
   var cluster = d3.cluster()
-    .size([180, width/4.5]);
+    .size([180,sixer()]);
   //  assigns the data to a hierarchy using parent-child relationships
   var root = d3.hierarchy(data, function(d) {
     return d.children;
@@ -53,11 +54,11 @@ d3.json(url, function(data) {
       r: function (d){
         if(d.data.name === 'Social Vulnerability Index (SVI)')
         {
-          return '22px';
+          return '24px';
         }
         if(d.data.name === 'Socioeconomic' || d.data.name === 'Household Composition & Disability' || d.data.name === 'Minority Status & language' || d.data.name === 'Housing Type & Transportation')
         {
-          return '14px';
+          return '18px';
         }
         else{
           return nodeRadius;
@@ -173,10 +174,26 @@ d3.json(url, function(data) {
     })
     .style('font-size',function (d) {
       if (d.data.colname === 'level1') {
-        return "16px";
+        return "14px";
       }
-      else { return '11px';}
+      else { return '12px';}
     })
     .text(function(d) { return d.data.name; });
+function sixer(){
+  if(currentwidth2 <= 576){
+    return width/2;
+  }
+  else{
+    return width/4.65;
+  }
+}
+ function translater() {
+   if(currentwidth2 <= 576){
+     return "translate(" + width / 4 + "," + height / 2.1 + ")";;
+   }
+   else{
+     return  "translate(" + width / 2.5 + "," + height / 2.05 + ")";
+   }
 
+ }
 });
