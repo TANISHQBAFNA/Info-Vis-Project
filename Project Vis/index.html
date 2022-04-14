@@ -15,6 +15,7 @@
   <script src="assets/js/main.js"></script>
   <script src="assets/js/radarChart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+  <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
 </head>
 
 <body>
@@ -80,21 +81,30 @@
         </div>
     </div>
 
-    <section id="tree-map" class="highlight-clean" style="height: 100vh;padding-top: 50px;background: url(assets/img/chartimg.png) bottom / contain no-repeat, rgb(255,255,255);">
-        <div class="container" data-aos="fade-down" data-aos-duration="1200" data-aos-delay="1000">
-            <div class="intro">
-                <h2 class="text-center">dendrogram&nbsp;<br></h2>
-                <p class="text-center">Potential dendogram for SVI category</p>
-            </div>
-            <div class="buttons"></div>
+    <div class="container tree-map" id="tree" style="background: rgb(255,255,255);margin-bottom: 20rem!important;">
+      <div class="row d-xxl-flex justify-content-xxl-center" data-aos="fade-down" data-aos-duration="1200" data-aos-delay="300" style="height: 90vh;">
+        <div class="col-md-12 col-lg-12 col-xl-12 col-xxl-11 d-flex d-xxl-flex flex-column justify-content-xxl-center align-items-xxl-center"  id="tree-map" style="color: rgb(255,255,255);margin-top: 10px;">
+          <h5 style="color: #56c6c6;margin-top: 23px;margin-bottom: 20px!important;">From the above video we can understand that Census tracts are subdivisions of counties for which the Census collects statistical data. The CDC/ATSDR SVI ranks each tract on <span style="color: #ff3d3d; font-weight: bold">15 social factors</span>, and groups them into four related themes. Each tract receives a separate ranking for each of the <span style="color: #F9C74F; font-weight: bold" >Four themes</span>, as well as an overall ranking.</h5>
         </div>
-    </section>
+      </div>
+    </div>
+
+
+<!--    <div class="container tree-map" style="background: rgb(255,255,255);margin-bottom: 2rem;">-->
+<!--      <h3 data-aos="fade-down" data-aos-duration="1200" data-aos-delay="300" class="text-center" style="margin-top: 50px; margin-bottom: 0px;"></h3>-->
+<!--      <div class="row"  style="height:100vh ;width: 100%">-->
+<!--      <div class="col-md-6" id="tree-map"></div>-->
+<!--        <div class="col-md-4" data-aos="fade-right" data-aos-duration="1200" data-aos-delay="300" id="legend" style="font-size: 20px"></div>-->
+<!--    </div>-->
+<!--    </div>-->
+
 
     <div class="container circular-chart">
         <div class="row" style="height: 80vh;">
+          <h2 class="text-center" style="color: #282846; margin-bottom: 30px">Select County</h2>
           <div class="col-md-6" id="circular-chart"></div>
           <div class="col-md-6" data-aos="fade-right" data-aos-duration="1200" data-aos-delay="300" id="radar-chart" style="font-size: 20px">
-                <h2 class="text-center" style="color: #282846; margin-bottom: 20px">Select County</h2>
+
                   <div>
                     <h5>County Name :&nbsp;<span id="county-name" class="county-information" style="color: #edc951;">Name</span></h5>
                   </div>
@@ -115,8 +125,10 @@
     <script src="assets/js/bs-init.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/holtzy/D3-graph-gallery@master/LIB/d3-scale-radial.js"></script>
-    <script src="https://d3js.org/d3.v4.js"></script>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
     <script src="assets/js/main.js"></script>
+    <script src="assets/js/treemap.js"></script>
 </body>
 <script>
 
@@ -135,7 +147,7 @@
     margin: margin,
     maxValue: 1,
     levels: 4,
-    roundStrokes: true,
+    roundStrokes: false,
     color: color
   };
   //Call function to draw the Radar chart

@@ -13,7 +13,6 @@ function RadarChart(id, data, options) {
     opacityCircles: 0.1, 	//The opacity of the circles of each blob
     strokeWidth: 2, 		//The width of the stroke around each blob
     roundStrokes: false,	//If true the area and stroke will follow a round path (cardinal-closed)
-    color: d3.scale.category10()	//Color function
   };
 
   //Put all of the options into a variable called cfg
@@ -49,20 +48,13 @@ function RadarChart(id, data, options) {
   var g = svg.append("g")
     .attr("transform", "translate(" + (cfg.w/2 + cfg.margin.left) + "," + (cfg.h/2 + cfg.margin.top) + ")");
 
-  /////////////////////////////////////////////////////////
-  ////////// Glow filter for some extra pizzazz ///////////
-  /////////////////////////////////////////////////////////
 
   //Filter for the outside glow
   var filter = g.append('defs').append('filter').attr('id','glow'),
-    feGaussianBlur = filter.append('feGaussianBlur').attr('stdDeviation','2.5').attr('result','coloredBlur'),
     feMerge = filter.append('feMerge'),
     feMergeNode_1 = feMerge.append('feMergeNode').attr('in','coloredBlur'),
     feMergeNode_2 = feMerge.append('feMergeNode').attr('in','SourceGraphic');
 
-  /////////////////////////////////////////////////////////
-  /////////////// Draw the Circular grid //////////////////
-  /////////////////////////////////////////////////////////
 
   //Wrapper for the grid & axes
   var axisGrid = g.append("g").attr("class", "axisWrapper");
@@ -114,9 +106,6 @@ function RadarChart(id, data, options) {
     .attr("y", function(d, i){ return rScale(maxValue * cfg.labelFactor) * Math.sin(angleSlice*i - Math.PI/2); })
     .text(function(d){return d});
 
-  /////////////////////////////////////////////////////////
-  ///////////// Draw the radar chart blobs ////////////////
-  /////////////////////////////////////////////////////////
 
   //The radial line function
   var radarLine = d3.svg.line.radial()
@@ -218,9 +207,6 @@ function RadarChart(id, data, options) {
      })
     .style("fill-opacity", 1);
 
-  /////////////////////////////////////////////////////////
-  //////// Append invisible circles for tooltip ///////////
-  /////////////////////////////////////////////////////////
 
   //Wrapper for the invisible circles on top
   var blobCircleWrapper = g.selectAll(".radarCircleWrapper")
@@ -258,37 +244,5 @@ function RadarChart(id, data, options) {
   var tooltip = g.append("text")
     .attr("class", "tooltip")
     .style("opacity", 0);
-
-  /////////////////////////////////////////////////////////
-  /////////////////// Helper Function /////////////////////
-  /////////////////////////////////////////////////////////
-
-  //Taken from http://bl.ocks.org/mbostock/7555321
-  //Wraps SVG text
-  // function wrap(text, width) {
-  //   text.each(function() {
-  //     var text = d3.select(this),
-  //       words = text.text().split(/\s+/).reverse(),
-  //       word,
-  //       line = [],
-  //       lineNumber = 0,
-  //       lineHeight = 1.4, // ems
-  //       y = text.attr("y"),
-  //       x = text.attr("x"),
-  //       dy = parseFloat(text.attr("dy")),
-  //       tspan = text.text(null).append("tspan").attr("x", x).attr("y", y).attr("dy", dy + "em");
-  //
-  //     while (word = words.pop()) {
-  //       line.push(word);
-  //       tspan.text(line.join(" "));
-  //       if (tspan.node().getComputedTextLength() > width) {
-  //         line.pop();
-  //         tspan.text(line.join(" "));
-  //         line = [word];
-  //         tspan = text.append("tspan").attr("x", x).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
-  //       }
-  //     }
-  //   });
-  // }//wrap
 
 }

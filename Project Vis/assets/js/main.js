@@ -39,6 +39,7 @@ d3.csv("assets/data/SVICounty.csv", function(data) {
     .data(data)
     .enter()
     .append("path")
+    .attr("class","circular")
     .attr("fill", function (d){
       if(d.THEMES>0.75){
         return "#F94144";
@@ -65,6 +66,7 @@ d3.csv("assets/data/SVICounty.csv", function(data) {
     .on('mousemove', mousemove)
     .on('mouseout', mouseout)
     .on('click', function (d){
+
  d3.csv("assets/data/County Info.csv", function(info) {
    let ind;
    console.log(info)
@@ -76,7 +78,7 @@ d3.csv("assets/data/SVICounty.csv", function(data) {
    // low level of vulnerability low to moderate level of vulnerability  a moderate to high level of vulnerability high level of vulnerability.
    d3.select(".circular-chart").select(".row").select('#radar-chart').selectAll('div').select('h5').select('#county-name').text(info[ind].County)
    d3.select(".circular-chart").select(".row").select('#radar-chart').select('a').text("Explore SVI data for "+ info[ind].County + " County")
-   d3.select(".circular-chart").select(".row").select('#radar-chart').select('h2').text("County Information")
+   d3.select(".circular-chart").select(".row").select('h2').text("County Information")
    d3.select(".circular-chart").select(".row").select('#radar-chart').selectAll('div').select('h5').select('#county-vulnerability').text(function (){
      if(d.THEMES>0.75){
        return "High level of vulnerability";
@@ -107,10 +109,10 @@ d3.csv("assets/data/SVICounty.csv", function(data) {
        }
      })
     })
-      radar(d.COUNTY)
-        .on('mouseover', mouseover)
-        .on('mousemove', mousemove)
-        .on('mouseout', mouseout);
+      radar(d.COUNTY);
+      reset();
+      d3.select(this)
+        .attr('fill','#00e6ff')
     });
 
 
@@ -135,7 +137,22 @@ d3.csv("assets/data/SVICounty.csv", function(data) {
     d3.select(this)
       .transition().duration(200)
       .style("fill-opacity", 1)
-
   }
-
+function reset(){
+  d3.selectAll('.circular')
+.attr("fill", function (data){
+    if(data.THEMES>0.75){
+      return "#F94144";
+    }
+    if(data.THEMES<=0.75 && data.THEMES>0.5 ){
+      return "#F8961E";
+    }
+    if(data.THEMES<=0.5 && data.THEMES>0.25){
+      return "#F9C74F";
+    }
+    if(data.THEMES<=0.25){
+      return "#43AA8B";
+    }
+  })
+}
 });
