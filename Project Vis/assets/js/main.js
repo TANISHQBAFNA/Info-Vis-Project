@@ -58,7 +58,7 @@ d3.csv("assets/data/SVICounty.csv", function(data) {
       .innerRadius(innerRadius)
       .outerRadius(function(d) { return y(d['THEMES']); })
       .startAngle(function(d) { return x(d.COUNTY); })
-      .endAngle(function(d) { return x(d.COUNTY) + x.bandwidth(); })
+      .endAngle(function(d) { return x(d.COUNTY) + x.bandwidth()  ; })
       .padAngle(0.01)
       .padRadius(innerRadius))
 

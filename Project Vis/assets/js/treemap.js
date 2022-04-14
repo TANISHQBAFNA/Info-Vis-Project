@@ -2,7 +2,7 @@ currentwidth2 = parseInt(d3.select('#tree-map').style('width'), 10)
 currentHeight2 = parseInt(d3.select('.tree-map').style('height'), 10)
 var url = 'assets/data/SVICategory.json';
 d3.json(url, function(data) {
-  var width = currentwidth2/2,
+  var width = currentwidth2,
     height = currentHeight2,
     nodeRadius = 10;
 
@@ -15,10 +15,10 @@ d3.json(url, function(data) {
 
   var radius = width;
   var mainGroup = svg.append('g')
-    .attr("transform", "translate(" + width/3.5 + "," + height/2.1 + ")");
+    .attr("transform", "translate(" + width/2.7 + "," + height/2.1 + ")");
 
   var cluster = d3.cluster()
-    .size([180, width/2.2]);
+    .size([180, width/4.5]);
   //  assigns the data to a hierarchy using parent-child relationships
   var root = d3.hierarchy(data, function(d) {
     return d.children;
@@ -128,11 +128,6 @@ d3.json(url, function(data) {
         }
       })
   }
-  // var legend = d3.select('body').select(".tree-map").select(".row").select('#legend')
-  // legend.append("circle").attr("cx",200).attr("cy",130).attr("r", 6).style("fill", "#69b3a2")
-  // legend.append("circle").attr("cx",200).attr("cy",160).attr("r", 6).style("fill", "#404080")
-  // legend.append("text").attr("x", 220).attr("y", 130).text("variable A").style("font-size", "15px")
-  // legend.append("text").attr("x", 220).attr("y", 160).text("variable B").style("font-size", "15px")
 
   nodes.append("text")
     .attr("dy", function(d){
@@ -142,7 +137,7 @@ d3.json(url, function(data) {
       }
       if(d.data.colname === 'level2')
       {
-        return "3em";
+        return "4em";
       }
       else{
         return '0.5em';
@@ -150,12 +145,12 @@ d3.json(url, function(data) {
     })
     .attr("dx",  function(d) {
       if (d.data.colname === 'level1') {
-        return "-15.5em";
+        return "-16.5em";
       }
       if(d.data.colname === 'level2')
       {
         if(d.data.name === 'Household Composition & Disability' ){
-          return "-2.5em";
+          return "-3.5em";
         }
         if ( d.data.name === 'Housing Type & Transportation'){
           return "-6.5em";
@@ -172,11 +167,16 @@ d3.json(url, function(data) {
     .attr("transform", function(d) {
       if(d.data.colname === 'level2')
       {
-          return "rotate(22)";
+          return "rotate(25)";
         }
       return "rotate(1)";
     })
-    .style('font-size','11px')
+    .style('font-size',function (d) {
+      if (d.data.colname === 'level1') {
+        return "16px";
+      }
+      else { return '11px';}
+    })
     .text(function(d) { return d.data.name; });
 
 });
