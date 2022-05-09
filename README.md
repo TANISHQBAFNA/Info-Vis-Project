@@ -17,6 +17,6 @@ Javascript files:
 
 Project Video Link: https://drive.google.com/file/d/1pZlRKeiPJXqRjFITNcZoOmbwZvVhAlIm/view?usp=sharing
 
-Github Link to project files- ttps://github.com/TANISHQBAFNA/Info-Vis-Project
+Github Link to project files- https://github.com/TANISHQBAFNA/Info-Vis-Project
 
 The Final Project Link- https://infoviz-cs5764.web.app/
