@@ -23,7 +23,7 @@ var svg = d3.select('body').select(".stacked-chart").select(".row").select('#sta
         "translate(" + margin.left + "," + margin.top + ")");
 
 // Read the data
-d3.csv("assets/data/SVI-Top5-CovidCases.csv",type, function(data) {
+d3.csv("assets/data/SVI-Top5-DailyCovidCases.csv",type, function(data) {
 
     // List of groups = header of the csv files
     var keys = data.columns.slice(1)
@@ -61,7 +61,7 @@ d3.csv("assets/data/SVI-Top5-CovidCases.csv",type, function(data) {
 
     // Add Y axis
     var y = d3.scaleLinear()
-        .domain([0, 40000])
+        .domain([0, 1800])
         .range([ height, 0 ]);
     svg.append("g")
         .call(d3.axisLeft(y).ticks(5))
