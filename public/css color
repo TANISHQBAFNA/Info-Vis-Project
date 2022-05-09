@@ -1,0 +1,12 @@
+  if (SVI > 0.75) {
+      return '#F94144';
+    }
+      if9SVI<=0.75 && SVI >0.5 ){
+        return "#F8961E";
+      }
+      if(SVI<=0.5 && SVI>0.25){
+        return "#F9C74F";
+      }
+      if(SVI<=0.25){
+        return "#43AA8B";
+      } })

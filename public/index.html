@@ -2,15 +2,17 @@
 <html lang="en">
 
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title>Project Data_Vis</title>
-    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Montserrat&amp;display=swap">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700">
-    <link rel="stylesheet" href="assets/fonts/font-awesome.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css">
-    <link rel="stylesheet" href="assets/css/style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+  <title>Project Data_Vis</title>
+
+  <link rel="icon" type="image/svg+xml" sizes="103x93" href="Wedding%20Day%20Blues.jpg">
+  <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Montserrat&amp;display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700">
+  <link rel="stylesheet" href="assets/fonts/font-awesome.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css">
+  <link rel="stylesheet" href="assets/css/style.css">
   <script src="https://d3js.org/d3.v4.js"></script>
   <script src="https://d3js.org/d3.v6.js"></script>
   <script src="assets/js/circular.js"></script>
@@ -20,132 +22,159 @@
 </head>
 
 <body>
-    <nav class="navbar navbar-light navbar-expand-lg navigation-clean-search">
-        <div class="container"><a class="navbar-brand" href="#">Company Name</a><button data-bs-toggle="collapse" class="navbar-toggler" data-bs-target="#navcol-1"><span class="visually-hidden">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
-            <div class="collapse navbar-collapse" id="navcol-1">
-                <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link" href="#stacked">Covid-19 Data</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#SVI-video">About SVI</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#circular">Covid-19 & SVI</a></li>
-                </ul>
-                <form class="me-auto search-form" target="_self">
-                    <div class="d-flex align-items-center"></div>
-                </form>
-              <a class="btn btn-light buttons" role="button" href="https://github.com/TANISHQBAFNA/Info-Vis-Project/tree/main/Project%20Vis/assets/data" >Dataset </a>
-            </div>
-        </div>
-    </nav>
+<nav class="navbar navbar-light navbar-expand-lg navigation-clean-search">
+  <div class="container"><a class="navbar-brand" href="#">Info_Vis CS5764</a><button data-bs-toggle="collapse" class="navbar-toggler" data-bs-target="#navcol-1"><span class="visually-hidden">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="navcol-1">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="#stacked">Covid-19 Data</a></li>
+        <li class="nav-item"><a class="nav-link" href="#SVI-video">About SVI</a></li>
+        <li class="nav-item"><a class="nav-link" href="#circular">Covid-19 & SVI</a></li>
+      </ul>
+      <form class="me-auto search-form" target="_self">
+        <div class="d-flex align-items-center"></div>
+      </form>
+      <a class="btn btn-light buttons" role="button" href="https://github.com/TANISHQBAFNA/Info-Vis-Project/tree/main/public/assets/data" >Dataset </a>
+    </div>
+  </div>
+</nav>
 
-    <div class="container" style="margin-top: 5rem;height: auto;">
-      <div class="row" style="margin-bottom: 5rem!important">
-        <div class="col-md-12 col-lg-6 d-md-flex justify-content-center align-items-center"><img class="img-fluid" id="heading-img" src="assets/img/Covid-illustration-552px_0.png"></div>
-        <div class="col-md-12 col-lg-6" id="heading" style="margin-bottom: 10rem!important" >
-          <section class="highlight-clean" style="background: rgba(255,255,255,0.44);opacity: 1;">
-            <div class="container d-xxl-flex flex-column justify-content-xxl-start align-items-xxl-start" style="padding-right: 0px;padding-left: 0px;">
-              <div class="intro">
-                <h2 class="text-center">COVID-19 &nbsp<span style="color: #cc333f;">"THE CHALLENGE"</span></h2>
-                <p class="text-start" data-aos="fade-left" data-aos-duration="1200" data-aos-delay="300" style="border-color: rgb(0,0,0);font-family: Montserrat, sans-serif;font-size: 20px;color: #000000;width: 100%;height: auto;">The present&nbsp;<span style="color: #edc951;"><strong>COVID-19</strong></span>&nbsp;pandemic has touched us all. The pandemic's impact and repercussions, however, are perceived differently depending on our status as individuals and as members of society.</p>
-                <p class="text-start" data-aos="fade-left" data-aos-duration="1200" data-aos-delay="300" style="border-color: rgb(0,0,0);font-family: Montserrat, sans-serif;font-size: 18px;color: #000000;">While some strive to adjust to working online, educating their children, and getting food through Instacart, others are forced to be infected in order for society to operate. Our many social identities and the social groupings to which we belong dictate our inclusion in <span style="color: #00a0b0;"><strong>Society</strong></span>&nbsp;and, as a result, our&nbsp;<span style="color: #cc333f;"><strong>Vulnerability</strong></span>&nbsp;to epidemics. </p>
-                <div class="buttons"><a class="btn btn-light" role="button" href="#stacked" data-bs-target="#SVI">Why is Covid-19 a 'Big Challenge' ?<br></a></div>
-              </div>
-            </div>
-          </section>
+<div class="container" style="margin-top: 5rem;height: auto;">
+  <div class="row" style="margin-bottom: 5rem!important">
+    <div class="col-md-12 col-lg-6 d-md-flex justify-content-center align-items-center"><img class="img-fluid" id="heading-img" src="assets/img/Covid-illustration-552px_0.png"></div>
+    <div class="col-md-12 col-lg-6" id="heading" style="margin-bottom: 10rem!important" >
+      <section class="highlight-clean" style="background: rgba(255,255,255,0.44);opacity: 1;">
+        <div class="container d-xxl-flex flex-column justify-content-xxl-start align-items-xxl-start" style="padding-right: 0px;padding-left: 0px;">
+          <div class="intro">
+            <h2 class="text-center">COVID-19 &nbsp<span style="color: #cc333f;">"THE CHALLENGE"</span></h2>
+            <p class="text-start" data-aos="fade-left" data-aos-duration="1200" data-aos-delay="300" style="border-color: rgb(0,0,0);font-family: Montserrat, sans-serif;font-size: 20px;color: #000000;width: 100%;height: auto;">The present&nbsp;<span style="color: #edc951;"><strong>COVID-19</strong></span>&nbsp;pandemic has touched us all. The pandemic's impact and repercussions, however, are perceived differently depending on our status as individuals and as members of society.</p>
+            <p class="text-start" data-aos="fade-left" data-aos-duration="1200" data-aos-delay="300" style="border-color: rgb(0,0,0);font-family: Montserrat, sans-serif;font-size: 18px;color: #000000;">While some strive to adjust to working online, educating their children, and getting food through Instacart, others are forced to be infected in order for society to operate. Our many social identities and the social groupings to which we belong dictate our inclusion in <span style="color: #00a0b0;"><strong>Society</strong></span>&nbsp;and, as a result, our&nbsp;<span style="color: #cc333f;"><strong>Vulnerability</strong></span>&nbsp;to epidemics. </p>
+            <div class="buttons"><a class="btn btn-light" role="button" href="#stacked" data-bs-target="#SVI">Why is Covid-19 a 'Big Challenge' ?<br></a></div>
+          </div>
         </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="container stacked-chart justify-content-center align-items-center" id="stacked" style="margin-bottom: 5rem;padding-top: 5rem;justify-content: center">
+  <div class="row">
+    <div class="col-md-12 col-lg-7" id="stacked-chart" style="height: 70vh;">
+      <h3 class="text-center" style="color: #282846;">Total Number of COVID Cases by County</h3>
+    </div>
+    <div class="col-md-12 col-lg-5 " id="stacked-info">
+      <section class="highlight-clean justify-content-md-center align-items-md-center" style="background: rgba(255,255,255,0.44);opacity: 1;">
+        <div class="container d-xxl-flex flex-column justify-content-xxl-start align-items-xxl-start" style="padding-right: 0px;padding-left: 0px;">
+          <div class="intro">
+            <h2 class="text-center">COVID-19 <span style="color: #cc333f;">"THE IMPACT"</span></h2>
+            <p class="text-start" data-aos="fade-left" data-aos-duration="1200" data-aos-delay="300" style="border-color: rgb(0,0,0);font-family: Montserrat, sans-serif;font-size: 18px;color: #000000;width: 100%;height: auto;"><span style="color: #ed6e51;font-weight: bold;">1.</span> Virginia’s Department of Public Health reports over 21,000 cases and over 700 deaths.<br><span style="color: #ed6e51;font-weight: bold;">2.</span> 33.5 million people have filed for unemployment claims in the United States since mid-March.<br><span style="color: #ED6E51FF;font-weight: bold">3.</span> The economic impacts of the disease have been felt much more broadly, as businesses have been forced to close or operate under different conditions, and as consumer spending power declines. As we look ahead, there is tremendous uncertainty about how the pandemic will end and how it will affect the global economy and our individual lives and livelihoods both in the short term and permanently.</p>
+            <p class="text-start" data-aos="fade-left" data-aos-duration="1200" data-aos-delay="300" style="border-color: rgb(0,0,0);font-family: Montserrat, sans-serif;font-size: 18px;color: #000000;">Every community must prepare for and respond to hazardous events, whether a natural disaster like a tornado or <b style="color: #cc333f;">disease outbreak</b>, or a human-made event such as a harmful chemical spill. A number of factors, including poverty, lack of access to transportation, and crowded housing may weaken a community’s ability to prevent human suffering and financial loss in a disaster. These factors are known as <span style="color: #00a0b0;font-weight: bold">Social Vulnerability Index (SVI).</span></p>
+            <div class="buttons"><a class="btn btn-light" role="button" href="#SVI" data-bs-target="#SVI">Let us explore SVI<br></a></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="container" id="SVI">
+  <div class="row d-xxl-flex justify-content-xxl-center" style="height: 100%;">
+    <div class="col-md-12 col-lg-12 col-xl-12 col-xxl-11 d-flex d-xxl-flex flex-column justify-content-xxl-center align-items-xxl-center" data-aos="fade-down" data-aos-duration="1200" data-aos-delay="300" id="SVI-video" style="color: rgb(255,255,255);">
+      <h1 class="d-flex d-xl-flex justify-content-center justify-content-xl-center" style="color: #56c6c6;margin-bottom: 26px;margin-top: 23px;"><strong>What is Social Vulnerability Index (SVI)?</strong></h1><video width="560" height="315" loop="" style="width: 100%;height: auto;" controls="" preload="auto">
+      <source src="video.webm" type="video/webm">
+    </video>
+    </div>
+  </div>
+</div>
+<div class="container tree-map" id="tree" style="margin-bottom: 20rem!important;">
+  <div class="row d-xxl-flex justify-content-center"  style="height: 90vh;">
+    <div class="col-md-12 col-lg-12 col-xl-12 col-xxl-11 d-flex d-xxl-flex flex-column justify-content-xxl-center align-items-xxl-center"  id="tree-map" style="color: rgb(255,255,255);margin-top: 10px;">
+    </div>
+    <div>
+      <h5 style="color: #282846;margin-top: 23px;margin-bottom: 20px!important;">From the above video we can understand that Census tracts are subdivisions of counties for which the Census collects statistical data. The CDC/ATSDR SVI ranks each tract on <span style="color: #ff3d3d; font-weight: bold">15 social factors</span>, and groups them into four related themes. Each tract receives a separate ranking for each of the <span style="color: #F9C74F; font-weight: bold" >Four themes</span>, as well as an <span style="color:#43AA8B;font-weight: bold">overall ranking</span>.</h5>
+      <a class="buttons btn btn-light" role="button" href="#circular" data-bs-target="#SVI" style="margin-top: 30px">Lets Study the <b>Social Vulnerability Index</b> for different counties and explore common themes for the Top-5 counties</a>
+    </div>
+  </div>
+</div>
+
+<div class="blank" style="margin-top: 5rem;height: 15vh">
+  <div class="row">
+  </div>
+</div>
+
+<div class="container circular-chart" id="circular" style="margin-bottom: 20rem!important;padding-top: 3rem">
+  <div class="row" style="height: 100vh;">
+    <h2 class="text-center" style="color: #282846; margin-bottom: 30px">Select County</h2>
+    <div class="col-md-6" id="circular-chart"></div>
+    <div class="col-md-6" data-aos="fade-right" data-aos-duration="1200" data-aos-delay="300" id="radar-chart" style="font-size: 20px;height:100vh!important;">
+      <div>
+        <h5>County Name :&nbsp;<span id="county-name" class="county-information" style="color: #edc951;">Name</span></h5>
+      </div>
+      <div>
+        <h5>County Population :&nbsp;<span id="county-population" class="county-information" style="color: #edc951;">Population</span></h5>
+      </div>
+      <div>
+        <h5>County Area :&nbsp;<span id="county-area" class="county-information" style="color: #edc951;">Area</span></h5>
+      </div><div>
+      <h5>Population Density:&nbsp;<span id="county-density" class="county-information" style="color: #edc951;">Density</span></h5>
+    </div>
+      <div>
+        <h5>Vulnerability:&nbsp;<span id="county-vulnerability" class="county-information" style="color: #edc951;">Vulnerability</span></h5>
+        <a class="buttons btn btn-light" role="button" href="#multi-chart" data-bs-target="#SVI" style="margin-top: 30px">Please Select a County</a>
       </div>
     </div>
+  </div>
+</div>
 
-    <div class="container stacked-chart justify-content-center align-items-center" id="stacked" style="margin-bottom: 5rem;padding-top: 5rem;justify-content: center">
-      <div class="row">
-        <div class="col-md-12 col-lg-7 d-md-flex justify-content-center align-items-center" id="stacked-chart" style="height: 70vh;"></div>
-        <div class="col-md-12 col-lg-5 " id="stacked-info">
-          <section class="highlight-clean justify-content-md-center align-items-md-center" style="background: rgba(255,255,255,0.44);opacity: 1;">
-            <div class="container d-xxl-flex flex-column justify-content-xxl-start align-items-xxl-start" style="padding-right: 0px;padding-left: 0px;">
-              <div class="intro">
-                <h2 class="text-center">COVID-19 <span style="color: #cc333f;">"THE IMPACT"</span></h2>
-                <p class="text-start" data-aos="fade-left" data-aos-duration="1200" data-aos-delay="300" style="border-color: rgb(0,0,0);font-family: Montserrat, sans-serif;font-size: 18px;color: #000000;width: 100%;height: auto;"><span style="color: #ed6e51;font-weight: bold;">1.</span> Virginia’s Department of Public Health reports over 21,000 cases and over 700 deaths.<br><span style="color: #ed6e51;font-weight: bold;">2.</span> 33.5 million people have filed for unemployment claims in the United States since mid-March.<br><span style="color: #ED6E51FF;font-weight: bold">3.</span> The economic impacts of the disease have been felt much more broadly, as businesses have been forced to close or operate under different conditions, and as consumer spending power declines. As we look ahead, there is tremendous uncertainty about how the pandemic will end and how it will affect the global economy and our individual lives and livelihoods both in the short term and permanently.</p>
-                <p class="text-start" data-aos="fade-left" data-aos-duration="1200" data-aos-delay="300" style="border-color: rgb(0,0,0);font-family: Montserrat, sans-serif;font-size: 18px;color: #000000;">Every community must prepare for and respond to hazardous events, whether a natural disaster like a tornado or <b style="color: #cc333f;">disease outbreak</b>, or a human-made event such as a harmful chemical spill. A number of factors, including poverty, lack of access to transportation, and crowded housing may weaken a community’s ability to prevent human suffering and financial loss in a disaster. These factors are known as <span style="color: #00a0b0;font-weight: bold">Social Vulnerability Index (SVI).</span></p>
-                <div class="buttons"><a class="btn btn-light" role="button" href="#SVI" data-bs-target="#SVI">Let us explore SVI<br></a></div>
-              </div>
-            </div>
-          </section>
-        </div>
-      </div>
+<div class="blank" style="margin-top: 5rem;height: 10vh">
+  <div class="row">
+  </div>
+</div>
+
+
+
+<div class="container multi-chart" id="multi-chart" style="height: 100vh;padding-top: 20vh;background: #ffffff;">
+  <div>
+    <h3 style="color: #282846;margin-top: 23px;margin-bottom: 20px!important;"> <span style="color: #ed6e51;font-weight: bold;">Alert!!! &nbsp</span>In the beginning of 2022 the number of Cases in Galax city for the month of January was at an all time high, close to a 800 cases for a county with a population of only 6660 </h3>
+  </div>
+  <div class="row" style="height: 100%;padding-top: 30px">
+    <div class="col-md-6" data-aos="fade-right" data-aos-duration="1200" data-aos-delay="300" id="map"><h2 class="text-center" style="color: #282846; margin-bottom: 30px">Top-5 Counties</h2>
+      <p class="text-start" data-aos="fade-right" data-aos-duration="1200" data-aos-delay="300" style="border-color: rgb(0,0,0);font-family: Montserrat, sans-serif;font-size: 18px;color: #000000;width: 100%;height: auto;"><span style="color: #ed6e51;font-weight: bold;">1.</span>&nbsp The top three counties with the highest SVI value has a high population density of over 800. However.
+        <br><span style="color: #ed6e51;font-weight: bold;">2.</span> &nbsp However, the area of the county of Galax City is one of the smallest, with just 8 square miles. This may be a reason for the high SVI value of this county, since the limited area cannot support a lot of resources and infrastructure for people to thrive on.<br><span style="color: #ED6E51FF;font-weight: bold">3.</span> The impact of having less population would be a reason for low economic development which might be the cause of poor household and socioeconomic status of these counties, which can be clearly seen in the radar chart the the household and socieconomic factors are very close to 1 indicating poor quality of living and economic growth
+        <br><span style="color: #ED6E51FF;font-weight: bold">4.</span>  The counties with the highest SVI seemed to show a large number of covid cases. This may be attributed as a result of SVI factors such as socioeconomic , household and housing factors whose lower values may have lead to poorer health conditions of the people living ther
+      </p>
     </div>
-    <div class="container" id="SVI">
-      <div class="row d-xxl-flex justify-content-xxl-center" style="height: 100%;">
-        <div class="col-md-12 col-lg-12 col-xl-12 col-xxl-11 d-flex d-xxl-flex flex-column justify-content-xxl-center align-items-xxl-center" data-aos="fade-down" data-aos-duration="1200" data-aos-delay="300" id="SVI-video" style="color: rgb(255,255,255);">
-          <h1 class="d-flex d-xl-flex justify-content-center justify-content-xl-center" style="color: #56c6c6;margin-bottom: 26px;margin-top: 23px;"><strong>What is Social Vulnerability Index (SVI)?</strong></h1><video width="560" height="315" loop="" style="width: 100%;height: auto;" controls="" preload="auto">
-          <source src="video.webm" type="video/webm">
-        </video>
-        </div>
-      </div>
+    <div class="col-md-6" data-aos="fade-left" data-aos-duration="1200" data-aos-delay="300" id="chart"><h2 class="text-center" style="color: #282846; margin-bottom: 30px">Last-5 Counties</h2>
+      <p class="text-start" data-aos="fade-left" data-aos-duration="1200" data-aos-delay="300" style="border-color: rgb(0,0,0);font-family: Montserrat, sans-serif;font-size: 18px;color: #000000;width: 100%;height: auto;"><span style="color: #ed6e51;font-weight: bold;">1.</span> &nbsp The lowest three counties with the least SVI value has a much lower population density( ranging from 25-800).<br><span style="color: #ed6e51;font-weight: bold;">2.</span> &nbsp 33.5 million people have filed for unemployment claims in the United States since mid-March.<br><span style="color: #ED6E51FF;font-weight: bold">3.</span> The economic impacts of the disease have been felt much more broadly, as businesses have been forced to close or operate under different conditions, and as consumer spending power declines. As we look ahead, there is tremendous uncertainty about how the pandemic will end and how it will affect the global economy and our individual lives and livelihoods both in the short term and permanently.</p>
     </div>
+  </div>
+</div>
 
-
-
-    <div class="container tree-map" id="tree" style="margin-bottom: 20rem!important;">
-      <div class="row d-xxl-flex justify-content-xxl-center"  style="height: 90vh;">
-        <div class="col-md-12 col-lg-12 col-xl-12 col-xxl-11 d-flex d-xxl-flex flex-column justify-content-xxl-center align-items-xxl-center"  id="tree-map" style="color: rgb(255,255,255);margin-top: 10px;">
-          <h5 style="color: #282846;margin-top: 23px;margin-bottom: 20px!important;">From the above video we can understand that Census tracts are subdivisions of counties for which the Census collects statistical data. The CDC/ATSDR SVI ranks each tract on <span style="color: #ff3d3d; font-weight: bold">15 social factors</span>, and groups them into four related themes. Each tract receives a separate ranking for each of the <span style="color: #F9C74F; font-weight: bold" >Four themes</span>, as well as an <span style="color:#43AA8B;font-weight: bold">overall ranking</span>.</h5>
-        </div>
-      </div>
+<div class="container reference">
+  <div class="row d-xxl-flex justify-content-xxl-center"  style="height: 50vh;">
+    <div class="col-md-12 col-lg-12 col-xl-12 col-xxl-11 d-flex d-xxl-flex flex-column justify-content-xxl-center align-items-xxl-center"  id="reference" style="color: rgb(255,255,255);margin-top: 10px;">
+      <h4 class="justify-content-xxl-center align-items-xxl-ce" style="color: #282846;margin-top: 23px;">References</h4>
+      <h6 style="color: #282846;margin-top: 23px;"><a style="color: #277da1" href="https://d3-graph-gallery.com/circular_barplot.html">https://d3-graph-gallery.com/circular_barplot.html</a></h6>
+      <h6 style="color: #282846;margin-top: 23px;"><a></a></h6>
     </div>
+  </div>
+</div>
 
-
-    <div class="container circular-chart" id="circular" style="margin-bottom: 20rem!important;padding-top: 2rem">
-        <div class="row" style="height: 100vh;">
-          <h2 class="text-center" style="color: #282846; margin-bottom: 30px">Select County</h2>
-          <div class="col-md-6" id="circular-chart"></div>
-          <div class="col-md-6" data-aos="fade-right" data-aos-duration="1200" data-aos-delay="300" id="radar-chart" style="font-size: 20px;height:100vh!important;">
-                  <div>
-                    <h5>County Name :&nbsp;<span id="county-name" class="county-information" style="color: #edc951;">Name</span></h5>
-                  </div>
-                  <div>
-                    <h5>Vulnerability:&nbsp;<span id="county-vulnerability" class="county-information" style="color: #edc951;">Vulnerability</span></h5>
-                    <a class="buttons btn btn-light" role="button" href="#multi-chart" data-bs-target="#SVI" style="margin-top: 30px">Please Select a County</a>
-                  </div>
-              </div>
-        </div>
-    </div>
-
-    <div class="blank" style="margin-top: 5rem;height: 10vh">
-      <div class="row">
-      </div>
-    </div>
-
-<!--    <div class="container multi-chart" id="multi-chart" style="height: 100vh;background: #ffffff;">-->
-<!--        <div class="row" style="height: 100%;">-->
-<!--          <div class="col-md-6" data-aos="fade-right" data-aos-duration="1200" data-aos-delay="300" id="map-chart">World Map chart</div>-->
-<!--            <div class="col-md-6 d-xxl-flex justify-content-xxl-center align-items-xxl-center" style="height: 100%;" data-aos="fade-left" data-aos-duration="1200" data-aos-delay="300" id="area-chart">Area chart showing Covid cases for the county the user selects from the circular bar chart with brushing</div>-->
-<!--        </div>-->
-<!--    </div>-->
-
-    <div class="container reference">
-      <div class="row d-xxl-flex justify-content-xxl-center"  style="height: 50vh;">
-        <div class="col-md-12 col-lg-12 col-xl-12 col-xxl-11 d-flex d-xxl-flex flex-column justify-content-xxl-center align-items-xxl-center"  id="reference" style="color: rgb(255,255,255);margin-top: 10px;">
-          <h4 style="color: #282846;margin-top: 23px;">References</h4>
-          <h6 style="color: #282846;margin-top: 23px;">From the above video we can understand that Census tracts are subdivisions of counties for which the Census collects statistical data. The CDC/ATSDR SVI ranks each tract on <span style="color: #ff3d3d; font-weight: bold">15 social factors</span>, and groups them into four related themes. Each tract receives a separate ranking for each of the <span style="color: #F9C74F; font-weight: bold" >Four themes</span>, as well as an <span style="color:#43AA8B;font-weight: bold">overall ranking</span>.</h6>
-        </div>
-      </div>
-    </div>
-
-    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
-    <script src="assets/js/bs-init.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/holtzy/D3-graph-gallery@master/LIB/d3-scale-radial.js"></script>
-    <script src="https://d3js.org/d3.v6.js"></script>
-    <script src="https://d3js.org/d3.v4.min.js"></script>
-    <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
-    <script src="assets/js/circular.js"></script>
-    <script src="assets/js/treemap.js"></script>
-    <script src="assets/js/stackedChart.js"></script>
+<script src="assets/bootstrap/js/bootstrap.min.js"></script>
+<script src="assets/js/bs-init.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/holtzy/D3-graph-gallery@master/LIB/d3-scale-radial.js"></script>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
+<script src="assets/js/circular.js"></script>
+<script src="assets/js/treemap.js"></script>
+<script src="assets/js/stackedChart.js"></script>
 </body>
 <script>
 
   currentWidth2 = parseInt(d3.select('#radar-chart').style('width'), 10)
   currentheight2 = parseInt(d3.select('.circular-chart').style('height'), 10)
   var margin = {top: 100, right: 100, bottom: 170, left: 100}
-    width = currentWidth2 - margin.left - margin.right,
+  width = currentWidth2 - margin.left - margin.right,
     height = currentheight2 - margin.top - margin.bottom ;
 
 
@@ -187,7 +216,9 @@
       RadarChart("#radar-chart", data, radarChartOptions);
     });
   }
+</script>
 <script type="module">
+
   // Import the functions you need from the SDKs you need
   import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-analytics.js";
@@ -210,6 +241,7 @@
   // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const analytics = getAnalytics(app);
+
 </script>
 
 </html>

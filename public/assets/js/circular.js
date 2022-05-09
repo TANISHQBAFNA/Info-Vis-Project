@@ -77,7 +77,10 @@ d3.csv("assets/data/SVICounty.csv", function(data) {
         }
         // low level of vulnerability low to moderate level of vulnerability  a moderate to high level of vulnerability high level of vulnerability.
         d3.select(".circular-chart").select(".row").select('#radar-chart').selectAll('div').select('h5').select('#county-name').text(info[ind].County)
-        d3.select(".circular-chart").select(".row").select('#radar-chart').select('a').text("Explore SVI data for "+ info[ind].County + " County")
+        d3.select(".circular-chart").select(".row").select('#radar-chart').selectAll('div').select('h5').select('#county-population').text(parseInt(info[ind].Population))
+        d3.select(".circular-chart").select(".row").select('#radar-chart').selectAll('div').select('h5').select('#county-density').text(parseInt(info[ind].Population)/parseInt(info[ind].Area))
+        d3.select(".circular-chart").select(".row").select('#radar-chart').selectAll('div').select('h5').select('#county-area').text(parseInt(info[ind].Area)+" sq. mile")
+        d3.select(".circular-chart").select(".row").select('#radar-chart').select('a').text("Lets find explore trends from the SVI data")
         d3.select(".circular-chart").select(".row").select('h2').text("County Information")
         d3.select(".circular-chart").select(".row").select('#radar-chart').selectAll('div').select('h5').select('#county-vulnerability').text(function (){
           if(d.THEMES>0.75){

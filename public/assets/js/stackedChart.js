@@ -8,8 +8,7 @@ function type(d, _, columns) {
     return d;
 }
 
-
-var margin = {top: 150, right: 230, bottom: 50, left: 50},
+var margin = {top: 50, right: -200, bottom: 0, left: 100},
     width = currentWidth - margin.left - margin.right,
     height = currentheight - margin.top - margin.bottom;
 
@@ -56,7 +55,6 @@ d3.csv("assets/data/SVI-Top5-DailyCovidCases.csv",type, function(data) {
         .attr("text-anchor", "end")
         .attr("x", 0)
         .attr("y", -20 )
-        .text("Total Number of COVID Cases by County")
         .attr("text-anchor", "start")
 
     // Add Y axis
