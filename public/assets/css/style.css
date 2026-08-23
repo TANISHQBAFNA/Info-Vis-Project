@@ -747,7 +747,7 @@ a {
 /* Mumbai live dashboard — own layout, not the Virginia bento. */
 .mumbai-bento {
   grid-template-columns: 1.35fr 0.95fr;
-  grid-template-rows: minmax(380px, 46vh) minmax(240px, 28vh) minmax(220px, 26vh);
+  grid-template-rows: minmax(440px, 50vh) minmax(560px, auto) minmax(320px, 36vh);
   grid-template-areas:
     "map about"
     "heat heat"
@@ -764,12 +764,49 @@ a {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.chart-mount-map,
-.chart-mount-heat,
+.chart-mount-map {
+  flex: 1;
+  min-height: 400px;
+}
+
+.chart-mount-heat {
+  flex: 0 0 auto;
+  min-height: 560px;
+  height: auto;
+  overflow: visible;
+}
+
 .chart-mount-ridge,
 .chart-mount-traces {
   flex: 1;
-  min-height: 180px;
+  min-height: 300px;
+}
+
+.chart-mount-heat svg {
+  height: auto;
+}
+
+body.mumbai-page .mc-tooltip {
+  min-width: 180px;
+  max-width: 280px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.mumbai-dash .live-dl dd {
+  font-size: 18px;
+}
+
+.mumbai-dash .map-legend {
+  font-size: 13px;
+  gap: 14px;
+  padding: 4px 18px 8px;
+}
+
+.mumbai-dash .map-legend i {
+  width: 12px;
+  height: 12px;
 }
 
 #panel-about .intel-feed {
@@ -857,9 +894,12 @@ a {
   }
 
   .chart-mount-map,
-  .chart-mount-heat,
   .chart-mount-ridge,
   .chart-mount-traces {
-    min-height: 240px;
+    min-height: 280px;
+  }
+
+  .chart-mount-heat {
+    min-height: 480px;
   }
 }

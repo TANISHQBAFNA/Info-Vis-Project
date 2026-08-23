@@ -11,12 +11,12 @@
   const CACHE_MS  = 15 * 60 * 1000;
 
   const AQI_STOPS = [
-    { max: 50,  label: "Good",        color: "#7a8f6a" },
-    { max: 100, label: "Moderate",    color: "#c4a574" },
-    { max: 150, label: "USG",         color: "#c47a3a" },
-    { max: 200, label: "Unhealthy",   color: "#b85c38" },
-    { max: 300, label: "Very unhlthy",color: "#8a3a28" },
-    { max: Infinity, label: "Hazardous", color: "#4a2c24" }
+    { max: 50,  label: "Good",           color: "#4f8a3e" },
+    { max: 100, label: "Moderate",       color: "#d4a017" },
+    { max: 150, label: "USG",            color: "#e07020" },
+    { max: 200, label: "Unhealthy",      color: "#c4332a" },
+    { max: 300, label: "Very unhealthy", color: "#8b1e4a" },
+    { max: Infinity, label: "Hazardous", color: "#4a1028" }
   ];
 
   function aqiColor(v) {
