@@ -142,10 +142,14 @@
     drawAll() {
       if (!global.MXViz) return;
       const sel = this.selected();
-      MXViz.drawMap(this.wards, sel);
-      MXViz.drawHeat(this.wards, sel);
-      MXViz.drawRidge(this.wards, sel);
-      MXViz.drawTraces(this.wards, sel);
+      const run = (name, fn) => {
+        try { fn(); }
+        catch (err) { console.warn("chart fail " + name, err); }
+      };
+      run("map", () => MXViz.drawMap(this.wards, sel));
+      run("heat", () => MXViz.drawHeat(this.wards, sel));
+      run("ridge", () => MXViz.drawRidge(this.wards, sel));
+      run("traces", () => MXViz.drawTraces(this.wards, sel));
       this.renderAbout();
       this.stamp();
     },

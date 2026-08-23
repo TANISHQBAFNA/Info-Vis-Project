@@ -32,19 +32,19 @@
   }
 
   function inkText(sel, size) {
-    sel.attr("fill", INK)
+    return sel.attr("fill", INK)
       .attr("font-size", size)
       .attr("font-family", FONT);
   }
 
   function mutedText(sel, size) {
-    sel.attr("fill", MUTED)
+    return sel.attr("fill", MUTED)
       .attr("font-size", size)
       .attr("font-family", FONT);
   }
 
   function haloLabel(sel, size) {
-    sel.attr("font-size", size)
+    return sel.attr("font-size", size)
       .attr("font-family", FONT)
       .attr("font-weight", 600)
       .attr("paint-order", "stroke")
