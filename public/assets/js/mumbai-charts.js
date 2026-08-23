@@ -32,18 +32,21 @@
   }
 
   function inkText(sel, size) {
+    if (!sel || !sel.attr) return sel;
     return sel.attr("fill", INK)
       .attr("font-size", size)
       .attr("font-family", FONT);
   }
 
   function mutedText(sel, size) {
+    if (!sel || !sel.attr) return sel;
     return sel.attr("fill", MUTED)
       .attr("font-size", size)
       .attr("font-family", FONT);
   }
 
   function haloLabel(sel, size) {
+    if (!sel || !sel.attr) return sel;
     return sel.attr("font-size", size)
       .attr("font-family", FONT)
       .attr("font-weight", 600)
@@ -52,6 +55,32 @@
       .attr("stroke-width", 3)
       .attr("stroke-linejoin", "round")
       .attr("fill", INK);
+  }
+
+  function styleAxis(axis, size, fill, weight) {
+    if (!axis) return;
+    const domain = axis.select(".domain");
+    if (domain && domain.remove) domain.remove();
+    const text = axis.selectAll("text");
+    if (!text || !text.attr) return;
+    text.attr("fill", fill || MUTED)
+      .attr("font-size", size || 11)
+      .attr("font-family", FONT)
+      .attr("font-weight", weight || 400);
+  }
+
+  function aqiFill(v) {
+    if (global.MumbaiDash && typeof MumbaiDash.aqiColor === "function") {
+      return MumbaiDash.aqiColor(v);
+    }
+    return "#c8b8a4";
+  }
+
+  function aqiName(v) {
+    if (global.MumbaiDash && typeof MumbaiDash.aqiLabel === "function") {
+      return MumbaiDash.aqiLabel(v);
+    }
+    return "—";
   }
 
   MXViz.drawMap = function (wards, sel) {
@@ -70,7 +99,7 @@
     const maxRain = d3.max(wards, d => d.live.rainToday) || 0;
     const r = d3.scaleSqrt().domain([0, Math.max(2, maxRain)]).range([11, 28]);
     const selectedId = sel && sel.id;
-    const color = MumbaiDash.aqiColor;
+    const color = aqiFill;
 
     const svg = d3.select(el).append("svg")
       .attr("viewBox", `0 0 ${width} ${height}`)
@@ -111,7 +140,7 @@
       .style("cursor", "pointer")
       .on("click", (event, d) => MumbaiDash.selectWard(d.id))
       .on("mousemove", (event, d) => {
-        tip(event, `<strong>${d.ward}</strong><br>AQI ${fmt(d.live.now.aqi, 0)} · ${MumbaiDash.aqiLabel(d.live.now.aqi)}<br>Rain today ${fmt(d.live.rainToday, 1)} mm`);
+        tip(event, `<strong>${d.ward}</strong><br>AQI ${fmt(d.live.now.aqi, 0)} · ${aqiName(d.live.now.aqi)}<br>Rain today ${fmt(d.live.rainToday, 1)} mm`);
       })
       .on("mouseleave", () => MumbaiDash.tip(null));
 
@@ -193,7 +222,7 @@
       .attr("width", Math.max(2, x.bandwidth()))
       .attr("height", Math.max(10, y.bandwidth()))
       .attr("rx", 2)
-      .attr("fill", d => MumbaiDash.aqiColor(d.aqi))
+      .attr("fill", d => aqiFill(d.aqi))
       .attr("stroke", d => d.id === selectedId ? INK : "none")
       .attr("stroke-width", 1.4)
       .style("cursor", "pointer")
@@ -201,7 +230,7 @@
       .on("mousemove", (event, d) => {
         const w = byId.get(d.id);
         const when = d.date ? d3.timeFormat("%d %b %H:%M")(d.date) : d.t;
-        tip(event, `<strong>${w ? w.ward : d.id}</strong><br>${when}<br>AQI ${fmt(d.aqi, 0)} · ${MumbaiDash.aqiLabel(d.aqi)}`);
+        tip(event, `<strong>${w ? w.ward : d.id}</strong><br>${when}<br>AQI ${fmt(d.aqi, 0)} · ${aqiName(d.aqi)}`);
       })
       .on("mouseleave", () => MumbaiDash.tip(null));
 
@@ -223,18 +252,16 @@
       .attr("font-size", 12)
       .attr("font-weight", 700)
       .attr("font-family", FONT)
-      .attr("fill", d => MumbaiDash.aqiColor(d.live.now.aqi))
+      .attr("fill", d => aqiFill(d.live.now.aqi))
       .text(d => fmt(d.live.now.aqi, 0));
 
     const tickKeys = keys.filter((_, i) => i % 3 === 0);
     g.append("g").attr("transform", `translate(0,${innerH})`)
       .call(d3.axisBottom(x).tickValues(tickKeys).tickFormat(hourLabel).tickSize(0))
-      .call(axis => axis.select(".domain").remove())
-      .call(axis => mutedText(axis.selectAll("text"), 11));
+      .call(axis => styleAxis(axis, 11));
     g.append("g")
       .call(d3.axisTop(x).tickValues(tickKeys).tickFormat(hourLabel).tickSize(0))
-      .call(axis => axis.select(".domain").remove())
-      .call(axis => mutedText(axis.selectAll("text"), 11));
+      .call(axis => styleAxis(axis, 11));
   };
 
   MXViz.drawRidge = function (wards, sel) {
@@ -300,12 +327,10 @@
 
     const byId = new Map(wet.map(w => [w.id, w]));
     g.append("g").call(d3.axisLeft(y).tickFormat(id => (byId.get(id) || {}).short || id).tickSize(0))
-      .call(axis => axis.select(".domain").remove())
-      .call(axis => inkText(axis.selectAll("text"), 12).attr("font-weight", 500));
+      .call(axis => styleAxis(axis, 12, INK, 500));
     g.append("g").attr("transform", `translate(0,${innerH})`)
       .call(d3.axisBottom(x).ticks(5).tickSize(0).tickFormat(d3.timeFormat("%d %b")))
-      .call(axis => axis.select(".domain").remove())
-      .call(axis => mutedText(axis.selectAll("text"), 11));
+      .call(axis => styleAxis(axis, 11));
   };
 
   MXViz.drawTraces = function (wards, sel) {
@@ -348,9 +373,11 @@
       g.append("g")
         .call(d3.axisLeft(y).ticks(2).tickSize(-(width - margin.left - margin.right)).tickFormat(v => v >= 10 ? d3.format(".0f")(v) : d3.format(".1f")(v)))
         .attr("transform", `translate(${margin.left},0)`)
-        .call(axis => axis.select(".domain").remove())
-        .call(axis => axis.selectAll("line").attr("stroke", "#e6ddd0"))
-        .call(axis => mutedText(axis.selectAll("text"), 10));
+        .call(axis => {
+          styleAxis(axis, 10);
+          const lines = axis.selectAll("line");
+          if (lines && lines.attr) lines.attr("stroke", "#e6ddd0");
+        });
 
       const last = hours[hours.length - 1];
       const lastV = last ? s.get(last) : NaN;
@@ -392,8 +419,7 @@
 
     svg.append("g").attr("transform", `translate(0,${height - 6})`)
       .call(d3.axisBottom(x).ticks(4).tickSize(0).tickFormat(d3.timeFormat("%d %b %H:%M")))
-      .call(axis => axis.select(".domain").remove())
-      .call(axis => mutedText(axis.selectAll("text"), 11));
+      .call(axis => styleAxis(axis, 11));
   };
 
   function hourLabel(t) {

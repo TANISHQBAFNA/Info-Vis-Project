@@ -85,10 +85,10 @@ const MissionControl = {
   },
 
   drawAll() {
-    if (window.MCViz?.drawCircular) MCViz.drawCircular();
-    if (window.MCViz?.drawRadar) MCViz.drawRadar();
-    if (window.MCViz?.drawStacked) MCViz.drawStacked();
-    if (window.MCViz?.drawTaxonomy) MCViz.drawTaxonomy();
+    if (window.MCViz?.drawCircular) { try { MCViz.drawCircular(); } catch (err) { console.warn(err); } }
+    if (window.MCViz?.drawRadar) { try { MCViz.drawRadar(); } catch (err) { console.warn(err); } }
+    if (window.MCViz?.drawStacked) { try { MCViz.drawStacked(); } catch (err) { console.warn(err); } }
+    if (window.MCViz?.drawTaxonomy) { try { MCViz.drawTaxonomy(); } catch (err) { console.warn(err); } }
     this.lockComboToChart();
   },
 

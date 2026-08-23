@@ -72,11 +72,24 @@
         return this.pullLive();
       }).then(() => {
         line(this.liveOk ? "LIVE" : "CACHE / FALLBACK");
-        this.mount();
+        try {
+          this.mount();
+        } catch (err) {
+          console.error("mount fail", err);
+          const dash = document.querySelector(".dashboard");
+          if (dash) dash.hidden = false;
+        }
         if (screen) screen.classList.add("is-done");
       }).catch(err => {
         console.error(err);
         line("Could not load data — " + (err && err.message ? err.message : err));
+        if (this.wards && this.wards.length) {
+          try { this.mount(); } catch (e2) {
+            const dash = document.querySelector(".dashboard");
+            if (dash) dash.hidden = false;
+          }
+          if (screen) screen.classList.add("is-done");
+        }
       });
     },
 
