@@ -20,8 +20,12 @@ The project is a Firebase Hosting site (see `firebase.json`, which serves the
   ```
   ~/.npm-global/bin/firebase emulators:start --only hosting --project demo-infoviz
   ```
-  Serves at `http://127.0.0.1:5000`. A `--project` value is required; any
-  `demo-*` id works and keeps the emulator fully offline (no login needed).
+  Serves at `http://127.0.0.1:5000` **on the Cloud Agent machine**. A `--project`
+  value is required; any `demo-*` id works and keeps the emulator fully offline
+  (no login needed). From your laptop, open this agent in the Agents Window,
+  click the plug icon (top right), and open the forwarded port 5000. Typing
+  `127.0.0.1:5000` in a normal browser tab hits your laptop, not this VM, unless
+  that forward is active.
 
 - Zero-dependency fallback (always works, even if `firebase-tools` is missing):
   ```
