@@ -123,8 +123,8 @@ a {
 .bento {
   display: grid;
   flex: 1;
-  grid-template-columns: 1.25fr 0.75fr;
-  grid-template-rows: minmax(300px, 34vh) auto minmax(340px, 1fr);
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: minmax(300px, 34vh) auto auto;
   grid-template-areas:
     "cases cases"
     "combo combo"
@@ -137,6 +137,11 @@ a {
 #panel-svi-about { grid-area: combo; }
 #panel-radar { grid-area: themes; }
 #panel-taxonomy { grid-area: factors; }
+
+#panel-radar,
+#panel-taxonomy {
+  min-height: 0;
+}
 
 .hud {
   display: flex;
@@ -442,6 +447,15 @@ a {
   max-height: min(560px, 70vh);
 }
 
+.chart-mount-theme {
+  flex: 0 0 auto;
+  width: 100%;
+  height: auto;
+  min-height: 420px;
+  aspect-ratio: 1 / 1;
+  max-height: min(680px, 78vh);
+}
+
 .chart-mount svg {
   display: block;
   width: 100%;
@@ -657,16 +671,6 @@ a {
 }
 
 @media (max-width: 1100px) {
-  .bento {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto;
-    grid-template-areas:
-      "cases"
-      "combo"
-      "themes"
-      "factors";
-  }
-
   .chart-mount-hero {
     min-height: 300px;
   }
@@ -676,6 +680,16 @@ a {
   .dashboard {
     width: 100%;
     padding: 10px 10px 24px;
+  }
+
+  .bento {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    grid-template-areas:
+      "cases"
+      "combo"
+      "themes"
+      "factors";
   }
 
   .hud,
@@ -707,7 +721,9 @@ a {
     max-height: min(52vh, 420px);
   }
 
-  .chart-mount-svi {
+  .chart-mount-svi,
+  .chart-mount-theme {
     max-height: min(420px, 70vh);
+    min-height: 280px;
   }
 }
