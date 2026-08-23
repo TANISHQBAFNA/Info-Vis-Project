@@ -1,0 +1,17 @@
+{
+  "name": "Info Vis Project",
+  "install": "mkdir -p \"$HOME/.npm-global\"\nnpm config set prefix \"$HOME/.npm-global\"\nnpm install -g firebase-tools",
+  "terminals": [
+    {
+      "name": "Firebase Hosting emulator",
+      "command": "export PATH=\"$HOME/.npm-global/bin:$PATH\" && firebase emulators:start --only hosting --project demo-infoviz",
+      "description": "Serves public/ at http://127.0.0.1:5000 to match Firebase Hosting."
+    }
+  ],
+  "ports": [
+    {
+      "name": "Firebase Hosting emulator",
+      "port": 5000
+    }
+  ]
+}

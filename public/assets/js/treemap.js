@@ -1,199 +1,177 @@
+(function () {
+  const Viz = window.MCViz = window.MCViz || {};
 
-var url = 'assets/data/SVICategory.json';
-currentwidth2 = parseInt(d3.select('.tree-map').style('width'), 10)
-currentHeight2 = parseInt(d3.select('.tree-map').style('height'), 10)
-d3.json(url, function(data) {
-  var width = currentwidth2,
-    height = currentHeight2,
-    nodeRadius = 12;
+  const themeColor = {
+    "Social Vulnerability Index (SVI)": "#7d9a86",
+    Socioeconomic: "#8f5b4a",
+    "Household Composition & Disability": "#c48962",
+    "Minority Status & language": "#8d7e92",
+    "Housing Type & Transportation": "#a86b56"
+  };
 
-  var svg = d3.select('body').select(".tree-map").select(".row").select('#tree-map')
-    .append('svg')
-    .attrs({
-      width: width,
-      height: height
+  function themeScore(row, name) {
+    if (!row) return 1;
+    if (name === "Social Vulnerability Index (SVI)") return Math.max(0.08, row.svi);
+    if (name === "Socioeconomic") return Math.max(0.08, row.theme1);
+    if (name === "Household Composition & Disability") return Math.max(0.08, row.theme2);
+    if (name === "Minority Status & language") return Math.max(0.08, row.theme3);
+    if (name === "Housing Type & Transportation") return Math.max(0.08, row.theme4);
+    return 1;
+  }
+
+  function parentTheme(d) {
+    let node = d;
+    while (node) {
+      if (themeColor[node.data.name] && node.data.name !== "Social Vulnerability Index (SVI)") {
+        return node.data.name;
+      }
+      node = node.parent;
+    }
+    return d.data.name;
+  }
+
+  function colorOf(d) {
+    if (themeColor[d.data.name]) return themeColor[d.data.name];
+    const theme = parentTheme(d);
+    return themeColor[theme] || "#7a7168";
+  }
+
+  function rawScore(row, d) {
+    if (!row) return null;
+    if (d.depth === 0) return row.svi;
+    if (d.depth === 1) return themeScore(row, d.data.name);
+    return themeScore(row, parentTheme(d));
+  }
+
+  Viz.drawTaxonomy = function () {
+    const { el, width, height } = MCUtils.mountSize("taxonomy-chart");
+    el.innerHTML = "";
+    const data = MissionControl.data.taxonomy;
+    if (!data) return;
+    const row = MissionControl.selectedRow();
+
+    const radius = Math.min(width, height) / 2 - 18;
+    const svg = d3.select(el)
+      .append("svg")
+      .attr("viewBox", `0 0 ${width} ${height}`)
+      .attr("preserveAspectRatio", "xMidYMid meet")
+      .style("overflow", "visible");
+    const g = svg.append("g").attr("transform", `translate(${width / 2},${height / 2})`);
+
+    const root = d3.hierarchy(data);
+    root.eachAfter((node) => {
+      if (!node.children) {
+        const themeName = node.parent && node.parent.depth === 1 ? node.parent.data.name : node.data.name;
+        const siblings = node.parent ? node.parent.children.length : 1;
+        node.value = themeScore(row, themeName) / siblings;
+      } else {
+        node.value = d3.sum(node.children, (c) => c.value);
+      }
     });
+    d3.partition().size([2 * Math.PI, radius])(root);
 
-  var radius = width;
-  var mainGroup = svg.append('g')
-    .attr("transform", translater());
+    const arc = d3.arc()
+      .startAngle((d) => d.x0)
+      .endAngle((d) => d.x1)
+      .padAngle(0.012)
+      .padRadius(radius / 3)
+      .innerRadius((d) => d.y0)
+      .outerRadius((d) => Math.max(d.y0, d.y1 - 2));
 
-  var cluster = d3.cluster()
-    .size([180,sixer()]);
-  //  assigns the data to a hierarchy using parent-child relationships
-  var root = d3.hierarchy(data, function(d) {
-    return d.children;
-  });
+    const selected = MissionControl.state.theme;
 
-  cluster(root);
-
-  var linksGenerator = d3.linkRadial()
-    .angle(function(d) { return d.x / 180 * Math.PI; })
-    .radius(function(d) { return d.y + 12; });
-
-  mainGroup.selectAll('path')
-    .data(root.links())
-    .enter()
-    .append('path')
-    .attrs({
-      d: linksGenerator,
-      fill: 'none',
-      stroke: '#b4b4b4',
-    });
-
-  var nodes = mainGroup.selectAll("g")
-    .data(root.descendants())
-    .enter()
-    .append("g")
-    .attr("transform", function(d) {
-      return "rotate(" + (d.x - 90) + ")translate(" + (d.y + 12 )+  ")";
-    });
-
-  nodes.append("circle")
-    .attrs({
-      r: function (d){
-        if(d.data.name === 'Social Vulnerability Index (SVI)')
-        {
-          return '24px';
-        }
-        if(d.data.name === 'Socioeconomic' || d.data.name === 'Household Composition & Disability' || d.data.name === 'Minority Status & language' || d.data.name === 'Housing Type & Transportation')
-        {
-          return '18px';
-        }
-        else{
-          return nodeRadius;
-        }
-      },
-      fill: function (d){
-        if(d.data.name === 'Social Vulnerability Index (SVI)')
-        {
-          return '#43AA8B';
-        }
-        if(d.data.name === 'Socioeconomic' || d.data.name === 'Household Composition & Disability' || d.data.name === 'Minority Status & language' || d.data.name === 'Housing Type & Transportation')
-        {
-          return '#F9C74F';
-        }
-        else{
-          return '#F94144';
-        }
-      },
-    })
-    .on('mouseover', mouseover)
-    .on('mousemove', mousemove)
-    .on('mouseout', mouseout);
-
-  var div =d3.select('body').select(".tree-map").select(".row").select('#tree-map').append('div')
-    .attr('class', 'tooltip2')
-    .style('display', 'none')
-
-  function mouseover(){
-    div.style('display', 'inline');
-    d3.select(this)
-      .transition().duration(200)
-      .style("fill", function (d){
-        if(d.data.name === 'Social Vulnerability Index (SVI)')
-        {
-          return '#235949';
-        }
-        if(d.data.name === 'Socioeconomic' || d.data.name === 'Household Composition & Disability' || d.data.name === 'Minority Status & language' || d.data.name === 'Housing Type & Transportation')
-        {
-          return '#dcaf47';
-        }
-        else{
-          return '#8f2829';
-        }
+    g.selectAll("path")
+      .data(root.descendants())
+      .join("path")
+      .attr("d", arc)
+      .attr("fill", (d) => colorOf(d))
+      .attr("fill-opacity", (d) => {
+        if (!selected) return d.depth === 0 ? 0.95 : 0.82;
+        return d.data.name === selected || hasAncestor(d, selected) || hasDescendantName(d, selected) ? 1 : 0.18;
       })
-  }
-  function mousemove(){
-    var d = d3.select(this).data()[0]
-    div
-      .html(d.data.name)
-      .style('left', (d3.event.pageX - 24) + 'px')
-      .style('top', (d3.event.pageY - 10) + 'px');
-  }
-  function mouseout(){
-    div.style('display', 'none');
-    d3.select(this)
-      .transition().duration(200)
-      .style("fill", function (d){
-        if(d.data.name === 'Social Vulnerability Index (SVI)')
-        {
-          return '#43AA8B';
-        }
-        if(d.data.name === 'Socioeconomic' || d.data.name === 'Household Composition & Disability' || d.data.name === 'Minority Status & language' || d.data.name === 'Housing Type & Transportation')
-        {
-          return '#F9C74F';
-        }
-        else{
-          return '#F94144';
-        }
+      .attr("stroke", (d) => (d.data.name === selected ? "#2c2824" : "rgba(44,40,36,0.12)"))
+      .attr("stroke-width", (d) => (d.data.name === selected ? 2 : 0.5))
+      .style("cursor", "pointer")
+      .on("click", (event, d) => MissionControl.selectTheme(d.data.name))
+      .on("mouseover", (event, d) => {
+        const score = rawScore(row, d);
+        const label = score == null ? d.data.name : `${d.data.name}<br>${row.county}: ${(+score).toFixed(3)}`;
+        MissionControl.tooltip.show(event, label);
       })
+      .on("mousemove", (event, d) => {
+        const score = rawScore(row, d);
+        const label = score == null ? d.data.name : `${d.data.name}<br>${row.county}: ${(+score).toFixed(3)}`;
+        MissionControl.tooltip.show(event, label);
+      })
+      .on("mouseout", () => MissionControl.tooltip.hide());
+
+    g.selectAll("text.slice")
+      .data(root.descendants().filter((d) => d.depth === 1 && (d.x1 - d.x0) > 0.35))
+      .join("text")
+      .attr("class", "slice")
+      .attr("transform", (d) => {
+        const angle = ((d.x0 + d.x1) / 2) * 180 / Math.PI;
+        const r = (d.y0 + d.y1) / 2;
+        return `rotate(${angle - 90}) translate(${r},0) rotate(${angle > 180 ? 180 : 0})`;
+      })
+      .attr("dy", "0.35em")
+      .attr("text-anchor", "middle")
+      .attr("fill", "#5c4a3a")
+      .attr("font-size", 10)
+      .attr("font-family", "Source Sans 3")
+      .attr("pointer-events", "none")
+      .text((d) => `${shortTheme(d.data.name)} ${row ? d.data && themeScore(row, d.data.name).toFixed(2) : ""}`.trim());
+
+    g.append("circle")
+      .attr("r", root.children ? Math.max(24, root.children[0].y0 - 4) : 28)
+      .attr("fill", "#fffdf8")
+      .attr("stroke", "#7d9a86")
+      .style("cursor", "pointer")
+      .on("click", () => MissionControl.selectTheme("Social Vulnerability Index (SVI)"));
+
+    g.append("text")
+      .attr("text-anchor", "middle")
+      .attr("y", row ? -4 : 4)
+      .attr("fill", "#7d9a86")
+      .attr("font-size", 11)
+      .attr("font-family", "Fraunces")
+      .attr("pointer-events", "none")
+      .text(row ? row.svi.toFixed(2) : "SVI");
+
+    if (row) {
+      g.append("text")
+        .attr("text-anchor", "middle")
+        .attr("y", 12)
+        .attr("fill", "#7a7168")
+        .attr("font-size", 9)
+        .attr("font-family", "Source Sans 3")
+        .attr("pointer-events", "none")
+        .text("SVI");
+    }
+  };
+
+  Viz.updateTaxonomy = function () {
+    Viz.drawTaxonomy();
+  };
+
+  function hasAncestor(d, name) {
+    let node = d;
+    while (node) {
+      if (node.data.name === name) return true;
+      node = node.parent;
+    }
+    return false;
   }
 
-  nodes.append("text")
-    .attr("dy", function(d){
-      if(d.data.colname === 'level1')
-      {
-        return "0.5em";
-      }
-      if(d.data.colname === 'level2')
-      {
-        return "4em";
-      }
-      else{
-        return '0.5em';
-      }
-    })
-    .attr("dx",  function(d) {
-      if (d.data.colname === 'level1') {
-        return "-16.5em";
-      }
-      if(d.data.colname === 'level2')
-      {
-        if(d.data.name === 'Household Composition & Disability' ){
-          return "-3.5em";
-        }
-        if ( d.data.name === 'Housing Type & Transportation'){
-          return "-6.5em";
-        }
-        else {
-          return "-2.5em";
-        }
-      }
-      else {
-        return '1em';
-      }
-    })
-    .attr("x", function(d) { return d.x < 180 === !d.children ? 6 : -6; })
-    .attr("transform", function(d) {
-      if(d.data.colname === 'level2')
-      {
-          return "rotate(25)";
-        }
-      return "rotate(1)";
-    })
-    .style('font-size',function (d) {
-      if (d.data.colname === 'level1') {
-        return "14px";
-      }
-      else { return '12px';}
-    })
-    .text(function(d) { return d.data.name; });
-function sixer(){
-  if(currentwidth2 <= 576){
-    return width/2;
+  function hasDescendantName(d, name) {
+    return d.descendants().some((n) => n.data.name === name);
   }
-  else{
-    return width/4.65;
-  }
-}
- function translater() {
-   if(currentwidth2 <= 576){
-     return "translate(" + width / 4 + "," + height / 2.1 + ")";;
-   }
-   else{
-     return  "translate(" + width / 2.5 + "," + height / 2.05 + ")";
-   }
 
- }
-});
+  function shortTheme(name) {
+    if (name.startsWith("Household")) return "Household";
+    if (name.startsWith("Minority")) return "Minority";
+    if (name.startsWith("Housing")) return "Housing";
+    if (name.startsWith("Socio")) return "Socio";
+    return name;
+  }
+})();
