@@ -148,11 +148,11 @@ const MissionControl = {
     this.data.svi.forEach((d) => { counts[d.band] += 1; });
     const peak = d3.max(this.data.daily, (d) => this.data.dailyKeys.reduce((sum, k) => sum + d[k], 0)) || 0;
     const kpis = [
-      { band: "all", label: "Counties & cities", value: String(this.data.svi.length), sub: "Virginia jurisdictions", accent: "var(--ink)" },
+      { band: "all", label: "Counties & cities", value: String(this.data.svi.length), sub: "Across Virginia", accent: "var(--ink)" },
       { band: "high", label: "High SVI", value: String(counts.high), sub: "Score ≥ 0.75", accent: "var(--high)" },
       { band: "mod-high", label: "Moderate–high", value: String(counts["mod-high"]), sub: "0.50 – 0.75", accent: "var(--mod-high)" },
       { band: "low", label: "Low SVI", value: String(counts.low), sub: "Score ≤ 0.25", accent: "var(--low)" },
-      { band: "sentinel", label: "Peak daily cases", value: peak.toLocaleString(), sub: "Stacked total, five counties", accent: "var(--accent)" }
+      { band: "focus", label: "Peak daily cases", value: peak.toLocaleString(), sub: "Five high-SVI counties combined", accent: "var(--accent)" }
     ];
     document.getElementById("kpi-row").innerHTML = kpis.map((k) => `
       <button class="kpi${this.state.band === k.band ? " is-active" : ""}" data-band="${k.band}" style="--kpi-accent:${k.accent}">
@@ -247,10 +247,10 @@ const MissionControl = {
       return;
     }
     this.state.band = band;
-    if (band === "sentinel") {
-      this.state.intelMode = "sentinel";
+    if (band === "focus") {
+      this.state.intelMode = "cases";
       this.state.caseKey = this.state.caseKey || "Galax";
-      this.selectCounty(this.caseToSvi[this.state.caseKey] || "Galax City", { mode: "sentinel" });
+      this.selectCounty(this.caseToSvi[this.state.caseKey] || "Galax City", { mode: "cases" });
       return;
     }
     this.state.intelMode = band === "all" ? "overview" : "band";
@@ -295,12 +295,12 @@ const MissionControl = {
       mode === "county" ? "County" :
       mode === "theme" ? "SVI factor" :
       mode === "band" ? "SVI band" :
-      mode === "sentinel" || mode === "cases" ? "COVID cases" :
+      mode === "cases" ? "COVID cases" :
       "Overview";
 
     if (mode === "theme") feed.innerHTML = this.themeIntel();
     else if (mode === "band") feed.innerHTML = this.bandIntel();
-    else if (mode === "sentinel" || mode === "cases") feed.innerHTML = this.caseIntel();
+    else if (mode === "cases") feed.innerHTML = this.caseIntel();
     else if (mode === "county") feed.innerHTML = this.countyIntel();
     else feed.innerHTML = this.overviewIntel();
 
@@ -321,16 +321,16 @@ const MissionControl = {
     const bottom = this.data.svi.slice(-5).reverse();
     return `
       <p class="intel-kicker">Overview</p>
-      <h3>COVID-19 DID NOT LAND EVENLY</h3>
-      <p class="intel-lede">The pandemic touched everyone. Who got crushed depended on status — as individuals and as members of a place.</p>
+      <h3>COVID-19 did not land evenly</h3>
+      <p class="intel-lede">The pandemic touched everyone. Who got hurt most depended on status — as individuals and as members of a place.</p>
       <p class="intel-body">While some people shifted to remote work and grocery delivery, others had to keep showing up so the rest of society could function. Social identity decided inclusion. Inclusion decided <strong>vulnerability</strong>.</p>
-      <p class="intel-body">This console binds Virginia’s county-level COVID telemetry to CDC’s Social Vulnerability Index. ${this.data.svi.length} jurisdictions. ${high} sit in the high band. Click anything that glows — a bar, a ring, an axis, a case layer — and the briefing rewrites.</p>
+      <p class="intel-body">This page connects Virginia’s county-level COVID case counts to the CDC’s Social Vulnerability Index. ${this.data.svi.length} counties and cities. ${high} sit in the high band. Click a bar, a ring, an axis, or a case layer to update this panel.</p>
       <div class="callout">Every community faces disasters. Poverty, no vehicle, crowded housing: those are not side notes. They are the SVI. They decide who can get out, who can stay home, and who gets sick first.</div>
       <p class="intel-kicker">Highest SVI</p>
       <div class="chip-list">${top.map((d) => `<button class="chip" data-county="${escapeAttr(d.county)}" type="button">${d.county}</button>`).join("")}</div>
       <p class="intel-kicker">Lowest SVI</p>
       <div class="chip-list">${bottom.map((d) => `<button class="chip" data-county="${escapeAttr(d.county)}" type="button">${d.county}</button>`).join("")}</div>
-      <p class="intel-body">Method notes: circular array after <a href="https://d3-graph-gallery.com/circular_barplot.html" target="_blank" rel="noopener">d3-graph-gallery</a>. Index definitions from CDC/ATSDR SVI. Case stream is VDH daily counts for five high-SVI sentinels, Mar 2020–May 2022.</p>
+      <p class="intel-body">Circular chart method after <a href="https://d3-graph-gallery.com/circular_barplot.html" target="_blank" rel="noopener">d3-graph-gallery</a>. Index definitions from CDC/ATSDR SVI. Case counts are VDH daily numbers for five high-SVI counties, March 2020–May 2022.</p>
     `;
   },
 
@@ -354,10 +354,10 @@ const MissionControl = {
       <h3>${row.county}</h3>
       <p class="intel-lede">${bandLabel(row.band)} · rank ${row.rank} of ${this.data.svi.length} · SVI ${row.svi.toFixed(4)}</p>
       <div class="stat-grid">
-        <div class="stat-card"><span>POPULATION</span><strong>${pop ? pop.toLocaleString() : "—"}</strong></div>
-        <div class="stat-card"><span>AREA</span><strong>${area ? area.toLocaleString() + " sq mi" : "—"}</strong></div>
-        <div class="stat-card"><span>DENSITY</span><strong>${density ? Math.round(density).toLocaleString() + " /sq mi" : "—"}</strong></div>
-        <div class="stat-card"><span>ESTABLISHED</span><strong>${info?.est || "—"}</strong></div>
+        <div class="stat-card"><span>Population</span><strong>${pop ? pop.toLocaleString() : "—"}</strong></div>
+        <div class="stat-card"><span>Area</span><strong>${area ? area.toLocaleString() + " sq mi" : "—"}</strong></div>
+        <div class="stat-card"><span>Density</span><strong>${density ? Math.round(density).toLocaleString() + " /sq mi" : "—"}</strong></div>
+        <div class="stat-card"><span>Established</span><strong>${info?.est || "—"}</strong></div>
       </div>
       <div class="meters">
         ${meters.map(([label, value, theme]) => `
@@ -370,7 +370,7 @@ const MissionControl = {
       </div>
       <p class="intel-body">${assessment}</p>
       ${info?.origin ? `<p class="intel-body"><strong>Origin.</strong> ${info.origin}</p>` : ""}
-      ${caseKey ? `<div class="callout">This jurisdiction is on the sentinel case stream. Open layer <button class="chip" data-case="${caseKey}" type="button">${caseKey}</button> to read the epidemic curve.</div>` : ""}
+      ${caseKey ? `<div class="callout">This county is one of the five in the COVID chart. Open the <button class="chip" data-case="${caseKey}" type="button">${caseKey}</button> layer to see its daily cases.</div>` : ""}
     `;
   },
 
@@ -396,7 +396,7 @@ const MissionControl = {
     const copy = BAND_COPY[band] || BAND_COPY.high;
     return `
       <p class="intel-kicker">${bandLabel(band)}</p>
-      <h3>${rows.length} JURISDICTIONS</h3>
+      <h3>${rows.length} counties and cities</h3>
       <p class="intel-body">${copy}</p>
       <div class="chip-list">
         ${sample.map((d) => `<button class="chip" data-county="${escapeAttr(d.county)}" type="button">${d.county} ${d.svi.toFixed(2)}</button>`).join("")}
@@ -410,16 +410,15 @@ const MissionControl = {
     const row = this.data.svi.find((d) => d.county === county);
     const series = this.data.daily;
     const peak = d3.greatest(series, (d) => d[key]);
-    const last = series[series.length - 1];
     return `
       <p class="intel-kicker">COVID case trend</p>
       <h3>${key} daily cases</h3>
       <p class="intel-lede">${county} · SVI ${row ? row.svi.toFixed(3) : "—"} · ${row ? bandLabel(row.band) : ""}</p>
       <div class="stat-grid">
-        <div class="stat-card"><span>PEAK DAILY</span><strong>${peak ? peak[key].toLocaleString() : "—"}</strong></div>
-        <div class="stat-card"><span>PEAK DATE</span><strong>${peak ? d3.timeFormat("%d %b %Y")(peak.date) : "—"}</strong></div>
+        <div class="stat-card"><span>Peak daily</span><strong>${peak ? peak[key].toLocaleString() : "—"}</strong></div>
+        <div class="stat-card"><span>Peak date</span><strong>${peak ? d3.timeFormat("%d %b %Y")(peak.date) : "—"}</strong></div>
       </div>
-      <p class="intel-body">The stream tracks five high-SVI places — Danville, Galax, Henry, Petersburg, Sussex — from March 2020 through May 2022. They were chosen because social vulnerability and case burden travel together, not because they are the only wounded counties.</p>
+      <p class="intel-body">The chart tracks five high-SVI counties — Danville, Galax, Henry, Petersburg, and Sussex — from March 2020 through May 2022. They were chosen because social vulnerability and case burden often travel together, not because they were the only places that suffered.</p>
       <div class="callout">Galax City, population 6,660, hit 550 new cases on 20 Jan 2022. That is not a rounding error. In a city of eight square miles, Omicron moved like a spark through dry grass.</div>
       <p class="intel-body">The top-SVI places share a pattern: high density or trapped geography, household composition near the ceiling, and socioeconomic scores that leave no slack. Low-SVI counties (Powhatan, New Kent, Hanover) sit at the other pole — lower density, stronger household and housing scores, more room to absorb a shock.</p>
       <div class="chip-list">
@@ -451,63 +450,63 @@ window.MCViz = window.MCViz || {};
 
 const FACTORS = {
   "Social Vulnerability Index (SVI)": {
-    kicker: "ROOT INDEX",
-    body: "Census tracts are the grains. CDC/ATSDR ranks each tract on 15 social factors, groups them into four themes, then issues an overall percentile. This console rolls those ranks up to Virginia counties and independent cities so the index can talk to case counts.",
+    kicker: "Overall index",
+    body: "Census tracts are the building blocks. CDC/ATSDR ranks each tract on 15 social factors, groups them into four themes, then issues an overall percentile. This page rolls those ranks up to Virginia counties and independent cities so the index can sit next to case counts.",
     why: "A high overall SVI is not a personality test. It is a forecast of who will need help first when the next wave, flood, or shutdown arrives.",
     leaves: ["Socioeconomic", "Household Composition & Disability", "Minority Status & language", "Housing Type & Transportation"]
   },
   Socioeconomic: {
-    kicker: "THEME 01",
+    kicker: "Theme",
     body: "Poverty, unemployment, income, and missing diplomas. This theme measures whether a place has slack — savings, jobs, and the paperwork of opportunity — when work stops and clinics fill.",
     why: "In this dataset the highest-SVI counties pin this axis near 1.0. Thin wallets become thin options: you cannot isolate if you cannot miss a shift.",
     leaves: ["Below Poverty", "Unemployed", "Income", "No High School Diploma"]
   },
   "Household Composition & Disability": {
-    kicker: "THEME 02",
+    kicker: "Theme",
     body: "Age at both ends, disability, and single-parent households. These are the people who need caregivers, and the caregivers who cannot leave.",
     why: "Galax City scores 1.000 here — the ceiling. A household under strain cannot also be the public-health system.",
     leaves: ["Aged 65 or Older", "Aged 17 or Younger", "Civilian with a Disability", "Single-Parent Household"]
   },
   "Minority Status & language": {
-    kicker: "THEME 03",
+    kicker: "Theme",
     body: "Minority population and people who speak English less than well. Language and racialized access shape who hears the warning, who trusts the messenger, and who gets a test.",
     why: "This theme is not destiny. It is a map of where outreach has to work harder than a press conference.",
     leaves: ["Minority", "Speaks English Less Than well"]
   },
   "Housing Type & Transportation": {
-    kicker: "THEME 04",
+    kicker: "Theme",
     body: "Multi-unit buildings, mobile homes, crowding, no vehicle, group quarters. Housing is how a virus travels at night. Transport is how a worker still has to travel in the morning.",
     why: "Crowding plus no car is a trap: you share air at home and you cannot leave the exposure geography.",
     leaves: ["Multi Unit structure", "Mobile Homes", "Crowding", "No Vehicle", "Group Quaters"]
   },
-  "Below Poverty": { kicker: "FACTOR", body: "Share of people living below poverty. Poverty turns a two-week isolation order into a choice between rent and health.", why: "High-SVI Virginia cities load this factor hard. It is the first gear in the socioeconomic theme." },
-  Unemployed: { kicker: "FACTOR", body: "Unemployment. Job loss in a pandemic is both an outcome and a cause — it strips insurance, food security, and the ability to stay home on purpose.", why: "Watch this axis alongside income. Together they describe whether a county can pause." },
-  Income: { kicker: "FACTOR", body: "Income level, inverted into vulnerability. Lower income, higher rank. Money is the quiet PPE.", why: "The original stacked-case story is also an income story: who could disappear from the workplace and who could not." },
-  "No High School Diploma": { kicker: "FACTOR", body: "Adults without a high-school diploma. Education tracks job type, health literacy, and bargaining power over risk.", why: "It is not a moral score. It is a channel through which warnings either arrive or bounce." },
-  "Aged 65 or Older": { kicker: "FACTOR", body: "Older adults. COVID lethality climbed the age curve. Places with older households needed a different kind of shield.", why: "Pair this with disability and no-vehicle scores: aging in place without a ride is a medical emergency waiting on a calendar." },
-  "Aged 17 or Younger": { kicker: "FACTOR", body: "Children. Schools, childcare, and multigenerational homes stitch kids into the transmission graph.", why: "Households with children could not treat lockdown as a quiet office." },
-  "Civilian with a Disability": { kicker: "FACTOR", body: "Civilians with a disability. Support networks, accessible transport, and medical dependence all raise the cost of disruption.", why: "A disaster plan that assumes everyone can walk to a site has already failed this factor." },
-  "Single-Parent Household": { kicker: "FACTOR", body: "Single-parent households. One adult, every role. When school closed, work and care collided with no spare adult.", why: "Galax’s household theme hitting 1.0 is this kind of pressure, stacked." },
-  Minority: { kicker: "FACTOR", body: "Minority population share. In U.S. pandemic data, racialized exposure at work and in housing kept repeating.", why: "Read it with language, crowding, and income — never as a standalone stereotype." },
-  "Speaks English Less Than well": { kicker: "FACTOR", body: "Limited English. Alerts, vaccine sites, and clinic scripts fail if they only exist in one tongue.", why: "This is a communications design problem with a body count." },
-  "Multi Unit structure": { kicker: "FACTOR", body: "Multi-unit housing. Shared halls, shared air, shared elevators.", why: "Density is not urban glamour during a respiratory wave. It is a multiplier." },
-  "Mobile Homes": { kicker: "FACTOR", body: "Mobile homes. Construction quality, siting, and tenure often travel with fewer protective resources.", why: "In rural Virginia this factor can rival city crowding as a vulnerability signature." },
-  Crowding: { kicker: "FACTOR", body: "Crowding — more people than rooms. Isolation becomes a story you tell, not a room you enter.", why: "This is one of the most mechanical COVID links in the whole index." },
-  "No Vehicle": { kicker: "FACTOR", body: "No vehicle. Testing sites, grocery, and night-shift jobs all recede.", why: "Transit-poor counties make staying safe a logistics puzzle." },
-  "Group Quaters": { kicker: "FACTOR", body: "Group quarters — dorms, prisons, nursing homes, shelters. The virus loves a roster.", why: "A single introduction can become a cluster before the rest of the county notices." }
+  "Below Poverty": { kicker: "Factor", body: "Share of people living below poverty. Poverty turns a two-week isolation order into a choice between rent and health.", why: "High-SVI Virginia cities load this factor hard. It is the first gear in the socioeconomic theme." },
+  Unemployed: { kicker: "Factor", body: "Unemployment. Job loss in a pandemic is both an outcome and a cause — it strips insurance, food security, and the ability to stay home on purpose.", why: "Watch this axis alongside income. Together they describe whether a county can pause." },
+  Income: { kicker: "Factor", body: "Income level, inverted into vulnerability. Lower income, higher rank. Money is the quiet PPE.", why: "The original stacked-case story is also an income story: who could disappear from the workplace and who could not." },
+  "No High School Diploma": { kicker: "Factor", body: "Adults without a high-school diploma. Education tracks job type, health literacy, and bargaining power over risk.", why: "It is not a moral score. It is a channel through which warnings either arrive or bounce." },
+  "Aged 65 or Older": { kicker: "Factor", body: "Older adults. COVID lethality climbed the age curve. Places with older households needed a different kind of shield.", why: "Pair this with disability and no-vehicle scores: aging in place without a ride is a medical emergency waiting on a calendar." },
+  "Aged 17 or Younger": { kicker: "Factor", body: "Children. Schools, childcare, and multigenerational homes stitch kids into the transmission graph.", why: "Households with children could not treat lockdown as a quiet office." },
+  "Civilian with a Disability": { kicker: "Factor", body: "Civilians with a disability. Support networks, accessible transport, and medical dependence all raise the cost of disruption.", why: "A disaster plan that assumes everyone can walk to a site has already failed this factor." },
+  "Single-Parent Household": { kicker: "Factor", body: "Single-parent households. One adult, every role. When school closed, work and care collided with no spare adult.", why: "Galax’s household theme hitting 1.0 is this kind of pressure, stacked." },
+  Minority: { kicker: "Factor", body: "Minority population share. In U.S. pandemic data, racialized exposure at work and in housing kept repeating.", why: "Read it with language, crowding, and income — never as a standalone stereotype." },
+  "Speaks English Less Than well": { kicker: "Factor", body: "Limited English. Alerts, vaccine sites, and clinic scripts fail if they only exist in one tongue.", why: "This is a communications design problem with a body count." },
+  "Multi Unit structure": { kicker: "Factor", body: "Multi-unit housing. Shared halls, shared air, shared elevators.", why: "Density is not urban glamour during a respiratory wave. It is a multiplier." },
+  "Mobile Homes": { kicker: "Factor", body: "Mobile homes. Construction quality, siting, and tenure often travel with fewer protective resources.", why: "In rural Virginia this factor can rival city crowding as a vulnerability signature." },
+  Crowding: { kicker: "Factor", body: "Crowding — more people than rooms. Isolation becomes a story you tell, not a room you enter.", why: "This is one of the most mechanical COVID links in the whole index." },
+  "No Vehicle": { kicker: "Factor", body: "No vehicle. Testing sites, grocery, and night-shift jobs all recede.", why: "Transit-poor counties make staying safe a logistics puzzle." },
+  "Group Quaters": { kicker: "Factor", body: "Group quarters — dorms, prisons, nursing homes, shelters. The virus loves a roster.", why: "A single introduction can become a cluster before the rest of the county notices." }
 };
 
 const BAND_COPY = {
-  high: "High SVI (≥ 0.75) is the red ring. These places entered COVID already carrying poverty, household strain, and housing pressure. Galax, Petersburg, Danville, Emporia, Hopewell sit at the top of the array. The case stream’s sentinel five were pulled from this neighborhood of the index.",
-  "mod-high": "Moderate-to-high SVI is the warning amber. Not the ceiling, but enough stacked disadvantage that a long wave still finds the seams — especially where density or group quarters add a spark.",
-  "mod-low": "Low-to-moderate SVI. Some protective structure, some remaining weak joints. These counties are easy to ignore in a highlight reel and still worth watching when a variant arrives.",
-  low: "Low SVI (≤ 0.25) is the green ring. Powhatan, New Kent, Hanover, Poquoson, Mathews live here. Density is usually lower. Socioeconomic and housing scores leave slack. That slack is the difference between a wave and a wreck."
+  high: "High SVI (≥ 0.75). These places entered COVID already carrying poverty, household strain, and housing pressure. Galax, Petersburg, Danville, Emporia, and Hopewell sit at the top. The five counties in the case chart were drawn from this part of the index.",
+  "mod-high": "Moderate-to-high SVI. Not the highest scores, but enough stacked disadvantage that a long wave still finds the seams — especially where density or group housing add a spark.",
+  "mod-low": "Low-to-moderate SVI. Some protective structure, some remaining weak joints. These counties are easy to skip in a highlight reel and still worth watching when a variant arrives.",
+  low: "Low SVI (≤ 0.25). Powhatan, New Kent, Hanover, Poquoson, and Mathews live here. Density is usually lower. Socioeconomic and housing scores leave more room to absorb a shock."
 };
 
 function countyAssessment(row, extra) {
   const bits = [];
   if (row.rank === 1) {
-    bits.push("Highest SVI in the Commonwealth. This is the calibration target — the place the rest of the array is measured against.");
+    bits.push("Highest SVI in Virginia. The other counties on the circular chart are ranked against this one.");
   } else if (row.svi >= 0.75) {
     bits.push("High vulnerability. Socioeconomic and housing pressure are not background color here; they are the operating environment.");
   } else if (row.svi <= 0.25) {
@@ -522,7 +521,7 @@ function countyAssessment(row, extra) {
     bits.push("Household composition is near the ceiling. Care burdens are structural, not anecdotal.");
   }
   if (extra.caseKey) {
-    bits.push("Because this county is on the sentinel stream, the bottom chart is not decoration — it is this place’s epidemic handwriting.");
+    bits.push("This county is one of the five shown in the COVID chart, so its daily cases appear in the stacked graph above.");
   }
   return bits.join(" ");
 }
@@ -550,8 +549,8 @@ function bandLabel(band) {
     "mod-high": "Moderate to high vulnerability",
     "mod-low": "Low to moderate vulnerability",
     low: "Low vulnerability",
-    all: "All jurisdictions",
-    sentinel: "Sentinel stream"
+    all: "All counties and cities",
+    focus: "Five high-SVI counties"
   }[band] || band;
 }
 

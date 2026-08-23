@@ -111,7 +111,7 @@
       .attr("stroke", (d) => (d.county === selected ? "#2c2824" : "transparent"))
       .attr("stroke-width", (d) => (d.county === selected ? 1.6 : 0))
       .attr("opacity", (d) => {
-        if (filter === "all" || filter === "sentinel") return 1;
+        if (filter === "all" || filter === "focus") return 1;
         return d.band === filter ? 1 : 0.12;
       });
 

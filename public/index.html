@@ -40,46 +40,52 @@
       </div>
     </section>
 
-    <section class="panel panel-featured" id="panel-cases">
-      <header class="panel-head">
-        <h2>Total COVID cases by county</h2>
-        <span class="panel-hint">Daily new cases in five high-SVI places · click a layer · drag to zoom</span>
-      </header>
-      <div id="stacked-chart" class="chart-mount chart-mount-tall"></div>
-    </section>
+    <div class="page-body">
+      <div class="main-col">
+        <section class="panel" id="panel-cases">
+          <header class="panel-head">
+            <h2>Total COVID cases by county</h2>
+            <span class="panel-hint">Daily new cases in five high-SVI counties · click a layer · drag to zoom</span>
+          </header>
+          <div id="stacked-chart" class="chart-mount chart-mount-tall"></div>
+        </section>
 
-    <section class="panel panel-featured" id="panel-array">
-      <header class="panel-head">
-        <h2>Social Vulnerability Index</h2>
-        <span class="panel-hint">Each bar is a Virginia county or city · click to inspect</span>
-      </header>
-      <div class="legend-row" id="array-legend"></div>
-      <div id="circular-chart" class="chart-mount chart-mount-hero"></div>
-    </section>
+        <section class="panel" id="panel-array">
+          <header class="panel-head">
+            <h2>Social Vulnerability Index</h2>
+            <span class="panel-hint">Each bar is a Virginia county or city · click to learn more</span>
+          </header>
+          <div class="legend-row" id="array-legend"></div>
+          <div id="circular-chart" class="chart-mount chart-mount-hero"></div>
+        </section>
 
-    <section class="panel" id="panel-radar">
-      <header class="panel-head">
-        <h2>SVI themes</h2>
-        <span class="panel-hint">Click an axis</span>
-      </header>
-      <div id="radar-chart" class="chart-mount"></div>
-    </section>
+        <div class="pair">
+          <section class="panel" id="panel-radar">
+            <header class="panel-head">
+              <h2>SVI themes for this county</h2>
+              <span class="panel-hint">Click an axis to read about that theme</span>
+            </header>
+            <div id="radar-chart" class="chart-mount"></div>
+          </section>
 
-    <section class="panel" id="panel-intel">
-      <header class="panel-head">
-        <h2>About this selection</h2>
-        <span class="panel-hint" id="intel-stamp">Overview</span>
-      </header>
-      <div id="intel-feed" class="intel-feed"></div>
-    </section>
+          <section class="panel" id="panel-taxonomy">
+            <header class="panel-head">
+              <h2>What SVI measures</h2>
+              <span class="panel-hint">15 factors in four themes · click a ring</span>
+            </header>
+            <div id="taxonomy-chart" class="chart-mount"></div>
+          </section>
+        </div>
+      </div>
 
-    <section class="panel" id="panel-taxonomy">
-      <header class="panel-head">
-        <h2>What SVI measures</h2>
-        <span class="panel-hint">15 factors in four themes · click a ring</span>
-      </header>
-      <div id="taxonomy-chart" class="chart-mount"></div>
-    </section>
+      <section class="panel" id="panel-intel">
+        <header class="panel-head">
+          <h2>About this selection</h2>
+          <span class="panel-hint" id="intel-stamp">Overview</span>
+        </header>
+        <div id="intel-feed" class="intel-feed"></div>
+      </section>
+    </div>
 
     <footer class="ticker">
       <span class="ticker-tag">Note</span>

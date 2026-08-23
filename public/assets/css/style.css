@@ -38,19 +38,12 @@ html,
 body {
   margin: 0;
   min-height: 100%;
+  overflow: auto;
   background:
     radial-gradient(1200px 500px at 10% -10%, #f6efe4 0%, transparent 50%),
     var(--bg);
   color: var(--text);
   font-family: var(--font-ui);
-}
-
-@media (min-width: 1101px) {
-  html,
-  body {
-    height: 100%;
-    overflow: hidden;
-  }
 }
 
 body {
@@ -110,28 +103,39 @@ a {
 .dashboard {
   position: relative;
   z-index: 1;
-  display: grid;
-  gap: 14px;
-  padding: 18px;
-  min-height: 100vh;
-  min-height: 100dvh;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.85fr) minmax(280px, 0.9fr);
-  grid-template-rows: auto auto minmax(230px, 0.9fr) minmax(0, 1.15fr) minmax(180px, 0.7fr) auto;
-  grid-template-areas:
-    "hud hud hud"
-    "command command command"
-    "cases cases cases"
-    "array array intel"
-    "radar taxonomy intel"
-    "ticker ticker ticker";
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 28px 0 72px;
 }
 
 .dashboard[hidden] {
   display: none;
 }
 
+.page-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  align-items: start;
+}
+
+.main-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
 .hud {
-  grid-area: hud;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -197,7 +201,6 @@ a {
 }
 
 .command-row {
-  grid-area: command;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(220px, 260px);
   gap: 12px;
@@ -312,30 +315,28 @@ a {
   min-height: 0;
 }
 
+.panel,
 .panel-featured {
   background: var(--panel-solid);
-  box-shadow: 0 10px 28px rgba(70, 52, 36, 0.05);
+  box-shadow: 0 8px 24px rgba(70, 52, 36, 0.04);
 }
 
-#panel-array { grid-area: array; }
-#panel-radar { grid-area: radar; }
-#panel-intel { grid-area: intel; }
-#panel-cases { grid-area: cases; }
-#panel-taxonomy { grid-area: taxonomy; }
+#panel-intel {
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 32px);
+}
 
 .panel-head {
   display: flex;
   align-items: baseline;
   gap: 12px;
-  padding: 14px 16px 8px;
+  flex-wrap: wrap;
+  padding: 16px 18px 8px;
 }
 
 .panel-head h2 {
-  font-size: 18px;
-}
-
-.panel-featured .panel-head h2 {
-  font-size: 22px;
+  font-size: 20px;
 }
 
 .panel-hint {
@@ -371,17 +372,16 @@ a {
 }
 
 .chart-mount {
-  flex: 1;
-  min-height: 180px;
+  height: 380px;
   position: relative;
 }
 
 .chart-mount-tall {
-  min-height: 220px;
+  height: 420px;
 }
 
 .chart-mount-hero {
-  min-height: 240px;
+  height: 520px;
 }
 
 .chart-mount svg {
@@ -394,6 +394,7 @@ a {
   flex: 1;
   overflow: auto;
   padding: 4px 18px 18px;
+  min-height: 280px;
 }
 
 .intel-kicker {
@@ -530,12 +531,11 @@ a {
 }
 
 .ticker {
-  grid-area: ticker;
   display: flex;
   align-items: center;
   gap: 12px;
   min-height: 40px;
-  padding: 0 4px;
+  padding: 8px 4px 0;
   color: var(--muted);
 }
 
@@ -598,45 +598,27 @@ a {
 }
 
 @media (max-width: 1100px) {
-  .dashboard {
-    height: auto;
-    overflow: visible;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto;
-    grid-template-areas:
-      "hud hud"
-      "command command"
-      "cases cases"
-      "array array"
-      "radar intel"
-      "taxonomy taxonomy"
-      "ticker ticker";
+  .page-body,
+  .pair {
+    grid-template-columns: 1fr;
+  }
+
+  #panel-intel {
+    position: static;
+    max-height: none;
   }
 
   .chart-mount,
   .chart-mount-hero,
   .chart-mount-tall {
-    min-height: 360px;
-  }
-
-  #panel-intel {
-    min-height: 420px;
+    height: 400px;
   }
 }
 
 @media (max-width: 760px) {
   .dashboard {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "hud"
-      "command"
-      "cases"
-      "array"
-      "radar"
-      "intel"
-      "taxonomy"
-      "ticker";
-    padding: 12px;
+    width: calc(100% - 24px);
+    padding: 16px 0 48px;
   }
 
   .hud,
