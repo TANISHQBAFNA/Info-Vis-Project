@@ -107,39 +107,34 @@ a {
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  width: min(1180px, calc(100% - 32px));
-  margin: 0 auto;
-  padding: 28px 0 72px;
+  gap: 12px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 12px 14px 20px;
+  min-height: 100vh;
+  box-sizing: border-box;
 }
 
 .dashboard[hidden] {
   display: none;
 }
 
-.page-body {
-  display: contents;
-}
-
-.main-col,
-.pair {
-  display: contents;
-}
-
 .bento {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.9fr);
+  flex: 1;
+  grid-template-columns: 1.25fr 0.75fr;
+  grid-template-rows: minmax(300px, 34vh) 520px minmax(340px, 1fr);
   grid-template-areas:
     "cases cases"
-    "svi about"
+    "combo combo"
     "themes factors";
-  gap: 16px;
+  gap: 12px;
   align-items: stretch;
 }
 
 #panel-cases { grid-area: cases; }
-#panel-array { grid-area: svi; }
-#panel-intel { grid-area: about; }
+#panel-svi-about { grid-area: combo; }
 #panel-radar { grid-area: themes; }
 #panel-taxonomy { grid-area: factors; }
 
@@ -167,9 +162,9 @@ a {
 }
 
 .hud h1 {
-  font-size: clamp(22px, 2.4vw, 34px);
+  font-size: clamp(22px, 2.2vw, 32px);
   line-height: 1.15;
-  max-width: 18ch;
+  max-width: none;
 }
 
 .hud-chip {
@@ -320,16 +315,40 @@ a {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  overflow: visible;
+  min-height: 0;
+  overflow: hidden;
   box-shadow: 0 8px 24px rgba(70, 52, 36, 0.04);
 }
 
 .panel-hero {
-  padding-bottom: 8px;
+  min-height: 0;
 }
 
-#panel-intel {
+.panel-combo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.8fr);
+  height: 520px;
+  max-height: 520px;
+  overflow: hidden;
+}
+
+.combo-chart,
+.combo-notes {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   min-height: 0;
+  overflow: hidden;
+}
+
+.combo-chart {
+  border-right: 1px solid var(--line);
+}
+
+.combo-notes .intel-feed {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .panel-head {
@@ -377,17 +396,17 @@ a {
 }
 
 .chart-mount {
-  height: 360px;
+  flex: 1;
+  min-height: 0;
+  height: auto;
   position: relative;
-  overflow: visible;
+  overflow: hidden;
 }
 
-.chart-mount-hero {
-  height: 460px;
-}
-
+.chart-mount-hero,
 .chart-mount-svi {
-  height: 440px;
+  flex: 1;
+  min-height: 0;
 }
 
 .chart-mount svg {
@@ -401,6 +420,7 @@ a {
   flex: 1;
   overflow: auto;
   padding: 4px 18px 18px;
+  min-height: 0;
 }
 
 .intel-kicker {
@@ -606,25 +626,39 @@ a {
 @media (max-width: 1100px) {
   .bento {
     grid-template-columns: 1fr;
+    grid-template-rows: auto;
     grid-template-areas:
       "cases"
-      "svi"
-      "about"
+      "combo"
       "themes"
       "factors";
   }
 
-  .chart-mount,
-  .chart-mount-hero,
-  .chart-mount-svi {
-    height: 400px;
+  .panel-combo {
+    grid-template-columns: 1fr;
+    height: auto;
+    max-height: none;
+  }
+
+  .combo-chart {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    height: 440px;
+  }
+
+  .combo-notes {
+    height: 420px;
+  }
+
+  .chart-mount-hero {
+    min-height: 300px;
   }
 }
 
 @media (max-width: 760px) {
   .dashboard {
-    width: calc(100% - 24px);
-    padding: 16px 0 48px;
+    width: 100%;
+    padding: 10px 10px 24px;
   }
 
   .hud,

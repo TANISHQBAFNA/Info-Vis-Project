@@ -49,21 +49,22 @@
         <div id="stacked-chart" class="chart-mount chart-mount-hero"></div>
       </section>
 
-      <section class="panel" id="panel-array">
-        <header class="panel-head">
-          <h2>Social Vulnerability Index</h2>
-          <span class="panel-hint">Each bar is a Virginia county or city · click to learn more</span>
-        </header>
-        <div class="legend-row" id="array-legend"></div>
-        <div id="circular-chart" class="chart-mount chart-mount-svi"></div>
-      </section>
-
-      <section class="panel" id="panel-intel">
-        <header class="panel-head">
-          <h2 id="intel-title">About this county</h2>
-          <span class="panel-hint" id="intel-stamp">Overview</span>
-        </header>
-        <div id="intel-feed" class="intel-feed"></div>
+      <section class="panel panel-combo" id="panel-svi-about">
+        <div class="combo-chart" id="panel-array">
+          <header class="panel-head">
+            <h2>Social Vulnerability Index</h2>
+            <span class="panel-hint">Each bar is a county or city · click to learn more</span>
+          </header>
+          <div class="legend-row" id="array-legend"></div>
+          <div id="circular-chart" class="chart-mount chart-mount-svi"></div>
+        </div>
+        <div class="combo-notes" id="panel-intel">
+          <header class="panel-head">
+            <h2 id="intel-title">About this county</h2>
+            <span class="panel-hint" id="intel-stamp">Overview</span>
+          </header>
+          <div id="intel-feed" class="intel-feed"></div>
+        </div>
       </section>
 
       <section class="panel" id="panel-radar">
