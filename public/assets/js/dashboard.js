@@ -25,7 +25,7 @@ const MissionControl = {
     const log = document.getElementById("boot-log");
     const write = (msg) => { if (log) log.textContent = msg; };
 
-    write("LOADING SVI RANKS…");
+    write("Loading SVI ranks…");
     const sviRows = await d3.csv("assets/data/SVICounty.csv", (d) => ({
       county: d.COUNTY,
       theme1: +d.THEME1,
@@ -35,7 +35,7 @@ const MissionControl = {
       svi: +d.THEMES
     }));
 
-    write("LOADING JURISDICTION DOSSIERS…");
+    write("Loading county details…");
     const infoRows = await d3.csv("assets/data/County Info.csv", (d) => ({
       county: d.County,
       est: d.Est,
@@ -45,10 +45,10 @@ const MissionControl = {
       area: parseArea(d.Area)
     }));
 
-    write("LOADING TAXONOMY…");
+    write("Loading SVI themes…");
     const taxonomy = await d3.json("assets/data/SVICategory.json");
 
-    write("LOADING SENTINEL CASE TELEMETRY…");
+    write("Loading COVID case counts…");
     const parseTime = d3.timeParse("%d-%m-%Y");
     const daily = await d3.csv("assets/data/SVI-Top5-DailyCovidCases.csv");
     const dailyKeys = daily.columns.slice(1);
@@ -146,13 +146,13 @@ const MissionControl = {
   renderKpis() {
     const counts = { high: 0, "mod-high": 0, "mod-low": 0, low: 0 };
     this.data.svi.forEach((d) => { counts[d.band] += 1; });
-    const peak = d3.max(this.data.daily, (d) => d3.max(this.data.dailyKeys, (k) => d[k])) || 0;
+    const peak = d3.max(this.data.daily, (d) => this.data.dailyKeys.reduce((sum, k) => sum + d[k], 0)) || 0;
     const kpis = [
-      { band: "all", label: "JURISDICTIONS", value: String(this.data.svi.length), sub: "Virginia counties & cities", accent: "var(--cyan)" },
-      { band: "high", label: "HIGH SVI", value: String(counts.high), sub: "≥ 0.75  critical", accent: "var(--high)" },
-      { band: "mod-high", label: "MODERATE-HIGH", value: String(counts["mod-high"]), sub: "0.50 – 0.75", accent: "var(--mod-high)" },
-      { band: "low", label: "LOW SVI", value: String(counts.low), sub: "≤ 0.25  buffered", accent: "var(--low)" },
-      { band: "sentinel", label: "OMICRON PEAK", value: peak.toLocaleString(), sub: "max daily in sentinel five", accent: "var(--amber)" }
+      { band: "all", label: "Counties & cities", value: String(this.data.svi.length), sub: "Virginia jurisdictions", accent: "var(--ink)" },
+      { band: "high", label: "High SVI", value: String(counts.high), sub: "Score ≥ 0.75", accent: "var(--high)" },
+      { band: "mod-high", label: "Moderate–high", value: String(counts["mod-high"]), sub: "0.50 – 0.75", accent: "var(--mod-high)" },
+      { band: "low", label: "Low SVI", value: String(counts.low), sub: "Score ≤ 0.25", accent: "var(--low)" },
+      { band: "sentinel", label: "Peak daily cases", value: peak.toLocaleString(), sub: "Stacked total, five counties", accent: "var(--accent)" }
     ];
     document.getElementById("kpi-row").innerHTML = kpis.map((k) => `
       <button class="kpi${this.state.band === k.band ? " is-active" : ""}" data-band="${k.band}" style="--kpi-accent:${k.accent}">
@@ -165,10 +165,10 @@ const MissionControl = {
 
   renderLegend() {
     const items = [
-      { band: "high", label: "HIGH ≥ 0.75", color: "var(--high)" },
-      { band: "mod-high", label: "MOD-HIGH", color: "var(--mod-high)" },
-      { band: "mod-low", label: "MOD-LOW", color: "var(--mod-low)" },
-      { band: "low", label: "LOW ≤ 0.25", color: "var(--low)" }
+      { band: "high", label: "High ≥ 0.75", color: "var(--high)" },
+      { band: "mod-high", label: "Moderate–high", color: "var(--mod-high)" },
+      { band: "mod-low", label: "Moderate–low", color: "var(--mod-low)" },
+      { band: "low", label: "Low ≤ 0.25", color: "var(--low)" }
     ];
     document.getElementById("array-legend").innerHTML = items.map((item) => `
       <button class="legend-swatch" data-band="${item.band}" type="button">
@@ -182,13 +182,6 @@ const MissionControl = {
   },
 
   startClocks() {
-    const clock = document.getElementById("sys-clock");
-    const tickClock = () => {
-      const now = new Date();
-      clock.textContent = now.toISOString().slice(11, 19) + "Z";
-    };
-    tickClock();
-    setInterval(tickClock, 1000);
     this.tickerIndex = 0;
     this.updateTicker();
     setInterval(() => {
@@ -212,12 +205,12 @@ const MissionControl = {
       `${bottom.county} ranks lowest SVI (${bottom.svi.toFixed(3)}) — more buffer when a disaster hits.`,
       "Galax City is 8 sq mi with 6,660 people. Density plus thin infrastructure is the vulnerability signature.",
       "January 2022 Omicron wave: Galax recorded 550 new cases in a single day — about 8% of the city.",
-      "Click a bar, a theme ring, a radar axis, or a case layer. The intel feed is the briefing room.",
+      "Click a county, a theme, or a case layer to update the notes on the right.",
       "High-SVI places did not just get sicker by chance — poverty, crowding, and transport gaps compound exposure."
     ];
     const row = this.selectedRow();
-    if (row) items.unshift(`LOCK // ${row.county.toUpperCase()} // SVI ${row.svi.toFixed(4)} // RANK ${row.rank}/${this.data.svi.length}`);
-    if (this.state.theme) items.unshift(`FACTOR // ${this.state.theme.toUpperCase()}`);
+    if (row) items.unshift(`${row.county} · SVI ${row.svi.toFixed(3)} · rank ${row.rank} of ${this.data.svi.length}`);
+    if (this.state.theme) items.unshift(`Theme: ${this.state.theme}`);
     return items;
   },
 
@@ -299,11 +292,11 @@ const MissionControl = {
     const stamp = document.getElementById("intel-stamp");
     const mode = this.state.intelMode;
     stamp.textContent =
-      mode === "county" ? "UNCLASSIFIED // DOSSIER" :
-      mode === "theme" ? "UNCLASSIFIED // FACTOR" :
-      mode === "band" ? "UNCLASSIFIED // BAND FILTER" :
-      mode === "sentinel" || mode === "cases" ? "UNCLASSIFIED // TELEMETRY" :
-      "UNCLASSIFIED // OVERVIEW";
+      mode === "county" ? "County" :
+      mode === "theme" ? "SVI factor" :
+      mode === "band" ? "SVI band" :
+      mode === "sentinel" || mode === "cases" ? "COVID cases" :
+      "Overview";
 
     if (mode === "theme") feed.innerHTML = this.themeIntel();
     else if (mode === "band") feed.innerHTML = this.bandIntel();
@@ -327,15 +320,15 @@ const MissionControl = {
     const top = this.data.svi.slice(0, 5);
     const bottom = this.data.svi.slice(-5).reverse();
     return `
-      <p class="intel-kicker">MISSION BRIEF</p>
+      <p class="intel-kicker">Overview</p>
       <h3>COVID-19 DID NOT LAND EVENLY</h3>
       <p class="intel-lede">The pandemic touched everyone. Who got crushed depended on status — as individuals and as members of a place.</p>
       <p class="intel-body">While some people shifted to remote work and grocery delivery, others had to keep showing up so the rest of society could function. Social identity decided inclusion. Inclusion decided <strong>vulnerability</strong>.</p>
       <p class="intel-body">This console binds Virginia’s county-level COVID telemetry to CDC’s Social Vulnerability Index. ${this.data.svi.length} jurisdictions. ${high} sit in the high band. Click anything that glows — a bar, a ring, an axis, a case layer — and the briefing rewrites.</p>
       <div class="callout">Every community faces disasters. Poverty, no vehicle, crowded housing: those are not side notes. They are the SVI. They decide who can get out, who can stay home, and who gets sick first.</div>
-      <p class="intel-kicker">HIGHEST SVI — LOCK A TARGET</p>
+      <p class="intel-kicker">Highest SVI</p>
       <div class="chip-list">${top.map((d) => `<button class="chip" data-county="${escapeAttr(d.county)}" type="button">${d.county}</button>`).join("")}</div>
-      <p class="intel-kicker">LOWEST SVI — THE BUFFERED EDGE</p>
+      <p class="intel-kicker">Lowest SVI</p>
       <div class="chip-list">${bottom.map((d) => `<button class="chip" data-county="${escapeAttr(d.county)}" type="button">${d.county}</button>`).join("")}</div>
       <p class="intel-body">Method notes: circular array after <a href="https://d3-graph-gallery.com/circular_barplot.html" target="_blank" rel="noopener">d3-graph-gallery</a>. Index definitions from CDC/ATSDR SVI. Case stream is VDH daily counts for five high-SVI sentinels, Mar 2020–May 2022.</p>
     `;
@@ -357,7 +350,7 @@ const MissionControl = {
     ];
     const assessment = countyAssessment(row, { pop, area, density, caseKey });
     return `
-      <p class="intel-kicker">JURISDICTION DOSSIER</p>
+      <p class="intel-kicker">County</p>
       <h3>${row.county}</h3>
       <p class="intel-lede">${bandLabel(row.band)} · rank ${row.rank} of ${this.data.svi.length} · SVI ${row.svi.toFixed(4)}</p>
       <div class="stat-grid">
@@ -391,7 +384,7 @@ const MissionControl = {
       <h3>${name}</h3>
       ${value != null ? `<p class="intel-lede">${row.county} scores ${(+value).toFixed(4)} on this axis.</p>` : ""}
       <p class="intel-body">${copy.body}</p>
-      ${copy.leaves ? `<p class="intel-kicker">COMPONENT FACTORS</p><div class="chip-list">${copy.leaves.map((leaf) => `<button class="chip" data-theme="${escapeAttr(leaf)}" type="button">${leaf}</button>`).join("")}</div>` : ""}
+      ${copy.leaves ? `<p class="intel-kicker">Related factors</p><div class="chip-list">${copy.leaves.map((leaf) => `<button class="chip" data-theme="${escapeAttr(leaf)}" type="button">${leaf}</button>`).join("")}</div>` : ""}
       <p class="intel-body">${copy.why}</p>
     `;
   },
@@ -402,7 +395,7 @@ const MissionControl = {
     const sample = rows.slice(0, 8);
     const copy = BAND_COPY[band] || BAND_COPY.high;
     return `
-      <p class="intel-kicker">FILTER // ${bandLabel(band).toUpperCase()}</p>
+      <p class="intel-kicker">${bandLabel(band)}</p>
       <h3>${rows.length} JURISDICTIONS</h3>
       <p class="intel-body">${copy}</p>
       <div class="chip-list">
@@ -419,8 +412,8 @@ const MissionControl = {
     const peak = d3.greatest(series, (d) => d[key]);
     const last = series[series.length - 1];
     return `
-      <p class="intel-kicker">SENTINEL TELEMETRY</p>
-      <h3>${key.toUpperCase()} CASE STREAM</h3>
+      <p class="intel-kicker">COVID case trend</p>
+      <h3>${key} daily cases</h3>
       <p class="intel-lede">${county} · SVI ${row ? row.svi.toFixed(3) : "—"} · ${row ? bandLabel(row.band) : ""}</p>
       <div class="stat-grid">
         <div class="stat-card"><span>PEAK DAILY</span><strong>${peak ? peak[key].toLocaleString() : "—"}</strong></div>
@@ -563,10 +556,10 @@ function bandLabel(band) {
 }
 
 function bandColor(v) {
-  if (v > 0.75) return "#ff3d5a";
-  if (v > 0.5) return "#ff7a32";
-  if (v > 0.25) return "#f4d35e";
-  return "#3dffb0";
+  if (v > 0.75) return "#9c5a4e";
+  if (v > 0.5) return "#c48962";
+  if (v > 0.25) return "#cbb688";
+  return "#7d9a86";
 }
 
 function parseArea(s) {
@@ -607,7 +600,7 @@ window.MCUtils = { bandOf, bandColor, bandLabel, themeValue, mountSize, debounce
 window.addEventListener("load", () => {
   MissionControl.boot().catch((err) => {
     const log = document.getElementById("boot-log");
-    if (log) log.textContent = "UPLINK FAILED — " + err.message;
+    if (log) log.textContent = "Could not load data — " + err.message;
     console.error(err);
   });
 });

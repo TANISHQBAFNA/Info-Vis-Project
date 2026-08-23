@@ -29,7 +29,7 @@
       g.append("circle")
         .attr("r", y(v))
         .attr("fill", "none")
-        .attr("stroke", "rgba(0,232,255,0.12)")
+        .attr("stroke", "rgba(143,91,74,0.12)")
         .attr("stroke-dasharray", v === 1 ? "0" : "2 4");
       g.append("text")
         .attr("class", "ring-label")
@@ -41,8 +41,8 @@
 
     g.append("circle")
       .attr("r", inner - 6)
-      .attr("fill", "rgba(0,232,255,0.04)")
-      .attr("stroke", "rgba(0,232,255,0.25)");
+      .attr("fill", "rgba(143, 91, 74, 0.06)")
+      .attr("stroke", "rgba(143, 91, 74, 0.22)");
 
     const arc = d3.arc()
       .innerRadius(inner)
@@ -79,43 +79,25 @@
       .attr("class", "hub-name")
       .attr("text-anchor", "middle")
       .attr("y", -8)
-      .attr("fill", "#d6e7f5")
-      .attr("font-family", "Orbitron, sans-serif")
-      .attr("font-size", 11)
-      .attr("letter-spacing", "0.08em");
+      .attr("fill", "#2c2824")
+      .attr("font-family", "Fraunces, serif")
+      .attr("font-size", 13)
+      .attr("letter-spacing", "-0.02em");
     center.append("text")
       .attr("class", "hub-svi")
       .attr("text-anchor", "middle")
       .attr("y", 10)
-      .attr("fill", "#00e8ff")
-      .attr("font-family", "IBM Plex Mono, monospace")
+      .attr("fill", "#8f5b4a")
+      .attr("font-family", "Source Sans 3, sans-serif")
       .attr("font-size", 13);
     center.append("text")
       .attr("class", "hub-band")
       .attr("text-anchor", "middle")
       .attr("y", 26)
-      .attr("fill", "#7a93a8")
-      .attr("font-family", "IBM Plex Mono, monospace")
-      .attr("font-size", 8)
-      .attr("letter-spacing", "0.12em");
-
-    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      const sweep = g.append("g").attr("class", "sweep-g");
-      sweep.append("line")
-        .attr("x1", 0)
-        .attr("y1", 0)
-        .attr("x2", 0)
-        .attr("y2", -outer)
-        .attr("stroke", "rgba(0,232,255,0.35)")
-        .attr("stroke-width", 2);
-      sweep.append("animateTransform")
-        .attr("attributeName", "transform")
-        .attr("type", "rotate")
-        .attr("from", "0 0 0")
-        .attr("to", "360 0 0")
-        .attr("dur", "9s")
-        .attr("repeatCount", "indefinite");
-    }
+      .attr("fill", "#7a7168")
+      .attr("font-family", "Source Sans 3, sans-serif")
+      .attr("font-size", 10)
+      .attr("letter-spacing", "0.04em");
 
     Viz.updateCircular();
   };
@@ -126,7 +108,7 @@
     const filter = MissionControl.state.band;
     paths
       .attr("fill", (d) => MCUtils.bandColor(d.svi))
-      .attr("stroke", (d) => (d.county === selected ? "#00e8ff" : "transparent"))
+      .attr("stroke", (d) => (d.county === selected ? "#2c2824" : "transparent"))
       .attr("stroke-width", (d) => (d.county === selected ? 1.6 : 0))
       .attr("opacity", (d) => {
         if (filter === "all" || filter === "sentinel") return 1;
@@ -135,9 +117,9 @@
 
     const row = MissionControl.selectedRow();
     const root = d3.select("#circular-chart");
-    root.select(".hub-name").text(row ? clipLabel(row.county) : "NO LOCK");
+    root.select(".hub-name").text(row ? clipLabel(row.county) : "Select a county");
     root.select(".hub-svi").text(row ? row.svi.toFixed(3) : "—");
-    root.select(".hub-band").text(row ? MCUtils.bandLabel(row.band).toUpperCase() : "AWAITING TARGET");
+    root.select(".hub-band").text(row ? MCUtils.bandLabel(row.band) : "");
   };
 
   function clipLabel(name) {

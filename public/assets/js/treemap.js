@@ -3,11 +3,11 @@
   let arcs;
 
   const themeColor = {
-    "Social Vulnerability Index (SVI)": "#3dffb0",
-    Socioeconomic: "#00e8ff",
-    "Household Composition & Disability": "#ffb020",
-    "Minority Status & language": "#c084fc",
-    "Housing Type & Transportation": "#ff7a32"
+    "Social Vulnerability Index (SVI)": "#7d9a86",
+    Socioeconomic: "#8f5b4a",
+    "Household Composition & Disability": "#c48962",
+    "Minority Status & language": "#8d7e92",
+    "Housing Type & Transportation": "#a86b56"
   };
 
   function colorOf(d) {
@@ -17,7 +17,7 @@
       if (themeColor[node.data.name]) return themeColor[node.data.name];
       node = node.parent;
     }
-    return "#7a93a8";
+    return "#7a7168";
   }
 
   Viz.drawTaxonomy = function () {
@@ -72,25 +72,25 @@
       })
       .attr("dy", "0.35em")
       .attr("text-anchor", "middle")
-      .attr("fill", "#05080f")
-      .attr("font-size", 9)
-      .attr("font-family", "IBM Plex Mono")
+      .attr("fill", "#5c4a3a")
+      .attr("font-size", 10)
+      .attr("font-family", "Source Sans 3")
       .attr("pointer-events", "none")
       .text((d) => shortTheme(d.data.name));
 
     g.append("circle")
       .attr("r", root.y1 ? root.children[0].y0 - 2 : 28)
-      .attr("fill", "#05080f")
-      .attr("stroke", "#3dffb0")
+      .attr("fill", "#fbf7f1")
+      .attr("stroke", "#7d9a86")
       .style("cursor", "pointer")
       .on("click", () => MissionControl.selectTheme("Social Vulnerability Index (SVI)"));
 
     g.append("text")
       .attr("text-anchor", "middle")
       .attr("y", 4)
-      .attr("fill", "#3dffb0")
-      .attr("font-size", 10)
-      .attr("font-family", "Orbitron")
+      .attr("fill", "#7d9a86")
+      .attr("font-size", 11)
+      .attr("font-family", "Fraunces")
       .attr("pointer-events", "none")
       .text("SVI");
 
@@ -106,7 +106,7 @@
         if (!selected) return d.depth === 0 ? 0.9 : 0.82;
         return d.data.name === selected || hasAncestor(d, selected) || hasDescendantName(d, selected) ? 1 : 0.18;
       })
-      .attr("stroke", (d) => (d.data.name === selected ? "#d6e7f5" : "rgba(5,8,15,0.4)"))
+      .attr("stroke", (d) => (d.data.name === selected ? "#2c2824" : "rgba(44,40,36,0.12)"))
       .attr("stroke-width", (d) => (d.data.name === selected ? 2 : 0.5));
   };
 
@@ -124,10 +124,10 @@
   }
 
   function shortTheme(name) {
-    if (name.startsWith("Household")) return "HOUSEHOLD";
-    if (name.startsWith("Minority")) return "MINORITY";
-    if (name.startsWith("Housing")) return "HOUSING";
-    if (name.startsWith("Socio")) return "SOCIO";
+    if (name.startsWith("Household")) return "Household";
+    if (name.startsWith("Minority")) return "Minority";
+    if (name.startsWith("Housing")) return "Housing";
+    if (name.startsWith("Socio")) return "Socio";
     return name;
   }
 })();

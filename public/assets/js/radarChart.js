@@ -6,7 +6,7 @@
     el.innerHTML = "";
     const row = MissionControl.selectedRow();
     if (!row) {
-      el.innerHTML = `<div class="chart-empty">AWAITING TARGET LOCK</div>`;
+      el.innerHTML = `<div class="chart-empty">Select a county on the SVI chart</div>`;
       return;
     }
 
@@ -43,8 +43,8 @@
     d3.range(1, levels + 1).reverse().forEach((lvl) => {
       g.append("circle")
         .attr("r", radius / levels * lvl)
-        .attr("fill", "rgba(0,232,255,0.03)")
-        .attr("stroke", "rgba(0,232,255,0.16)");
+        .attr("fill", "rgba(143,91,74,0.04)")
+        .attr("stroke", "rgba(143,91,74,0.16)");
       g.append("text")
         .attr("class", "ring-label")
         .attr("x", 4)
@@ -72,7 +72,7 @@
       .attr("y1", 0)
       .attr("x2", (d, i) => rScale(1.05) * Math.cos(angleSlice * i - Math.PI / 2))
       .attr("y2", (d, i) => rScale(1.05) * Math.sin(angleSlice * i - Math.PI / 2))
-      .attr("stroke", (d) => (selectedTheme === d.theme ? "#00e8ff" : "rgba(214,231,245,0.28)"))
+      .attr("stroke", (d) => (selectedTheme === d.theme ? "#8f5b4a" : "rgba(44,40,36,0.18)"))
       .attr("stroke-width", (d) => (selectedTheme === d.theme ? 2 : 1));
 
     axis.append("text")
@@ -81,7 +81,7 @@
       .attr("dy", "0.35em")
       .attr("x", (d, i) => rScale(1.28) * Math.cos(angleSlice * i - Math.PI / 2))
       .attr("y", (d, i) => rScale(1.28) * Math.sin(angleSlice * i - Math.PI / 2))
-      .attr("fill", (d) => (selectedTheme === d.theme ? "#00e8ff" : "#7a93a8"))
+      .attr("fill", (d) => (selectedTheme === d.theme ? "#8f5b4a" : "#7a7168"))
       .attr("font-size", (d) => (d.axis === "SVI" ? 12 : 10))
       .text((d) => d.axis);
 
@@ -107,8 +107,8 @@
       .attr("r", (d) => (d.axis === "SVI" || selectedTheme === d.theme ? 6 : 4))
       .attr("cx", (d, i) => rScale(d.value) * Math.cos(angleSlice * i - Math.PI / 2))
       .attr("cy", (d, i) => rScale(d.value) * Math.sin(angleSlice * i - Math.PI / 2))
-      .attr("fill", (d) => (d.axis === "SVI" ? "#00e8ff" : color))
-      .attr("stroke", "#05080f")
+      .attr("fill", (d) => (d.axis === "SVI" ? "#8f5b4a" : color))
+      .attr("stroke", "#fffdf8")
       .style("cursor", "pointer")
       .on("click", (event, d) => MissionControl.selectTheme(d.theme))
       .on("mouseover", (event, d) => {
