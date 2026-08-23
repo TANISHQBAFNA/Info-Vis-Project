@@ -3,31 +3,31 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mumbai Exposure Index</title>
+  <title>Mumbai now — live rain and air</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect fill='%23efe8dc' width='64' height='64'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='%239c5a4e' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='6' fill='%237d9a86'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=mumbai-1">
+  <link rel="stylesheet" href="assets/css/style.css?v=mumbai-live-3">
 </head>
-<body>
+<body class="mumbai-page">
   <div id="boot-screen">
-    <p class="boot-title">Mumbai Exposure Index</p>
-    <p id="boot-log" class="boot-log">Loading wards…</p>
+    <p class="boot-title">Mumbai now</p>
+    <p id="boot-log" class="boot-log">Calling live weather and air feeds…</p>
   </div>
 
-  <div class="dashboard" hidden>
+  <div class="dashboard mumbai-dash" hidden>
     <header class="hud">
       <div class="hud-left">
         <div class="hud-brand">
-          <p class="hud-kicker">BMC · 24 administrative wards · monsoon 2026</p>
-          <h1>Where Mumbai is most exposed — flood, heat, air, and services</h1>
+          <p class="hud-kicker">Live · 24 BMC wards · Open-Meteo</p>
+          <h1>What the monsoon and the air are doing, ward by ward</h1>
         </div>
       </div>
       <div class="hud-right">
-        <p class="hud-chip"><span class="hud-chip-label">Live layer</span><span id="live-stamp">Rain + AQI</span></p>
+        <p class="hud-chip"><span class="hud-chip-label">Updated</span><span id="live-stamp">—</span></p>
         <a class="hud-btn" href="index.html">Virginia SVI</a>
-        <button class="hud-btn" id="btn-reset" type="button">Reset view</button>
+        <button class="hud-btn" id="btn-reset" type="button">Reset</button>
       </div>
     </header>
 
@@ -35,65 +35,64 @@
       <div class="kpis" id="kpi-row"></div>
       <div class="command-bar">
         <label class="command-label" for="ward-search">Ward</label>
-        <input id="ward-search" type="search" placeholder="Search a ward or neighbourhood…" autocomplete="off" spellcheck="false">
+        <input id="ward-search" type="search" placeholder="Find a ward…" autocomplete="off" spellcheck="false">
         <ul id="ward-results" class="command-results" hidden></ul>
       </div>
     </section>
 
-    <div class="bento">
-      <section class="panel panel-hero" id="panel-cases">
+    <div class="bento mumbai-bento">
+      <section class="panel" id="panel-map">
         <header class="panel-head">
-          <h2>Daily rainfall in five high-exposure wards</h2>
-          <span class="panel-hint" id="rain-hint">Last 14 days · Open-Meteo · click a layer</span>
+          <h2>Now: air colour, rain size</h2>
+          <span class="panel-hint">Arabian Sea to the west · click a ward</span>
         </header>
-        <div id="stacked-chart" class="chart-mount chart-mount-hero"></div>
+        <div class="map-legend" id="map-legend"></div>
+        <div id="ward-map" class="chart-mount chart-mount-map"></div>
       </section>
 
-      <section class="panel panel-combo" id="panel-svi-about">
-        <div class="combo-chart" id="panel-array">
-          <header class="panel-head">
-            <h2>Mumbai Exposure Index</h2>
-            <span class="panel-hint">Each bar is a BMC ward · click to learn more</span>
-          </header>
-          <div class="legend-row" id="array-legend"></div>
-          <div id="circular-chart" class="chart-mount chart-mount-svi"></div>
-        </div>
-        <div class="combo-notes" id="panel-intel">
-          <header class="panel-head">
-            <h2 id="intel-title">About this ward</h2>
-            <span class="panel-hint" id="intel-stamp">Overview</span>
-          </header>
-          <div id="intel-feed" class="intel-feed"></div>
-        </div>
+      <section class="panel" id="panel-about">
+        <header class="panel-head">
+          <h2 id="about-title">This hour</h2>
+          <span class="panel-hint" id="about-stamp">Live</span>
+        </header>
+        <div id="about-feed" class="intel-feed"></div>
       </section>
 
-      <section class="panel" id="panel-radar">
+      <section class="panel" id="panel-heat">
         <header class="panel-head">
-          <h2 id="radar-title">Exposure themes for this ward</h2>
-          <span class="panel-hint">Click an axis to read about that theme</span>
+          <h2>AQI last 24 hours</h2>
+          <span class="panel-hint">Darker = worse air · rows sorted worst → best right now</span>
         </header>
-        <div id="radar-chart" class="chart-mount chart-mount-theme"></div>
+        <div id="aqi-heat" class="chart-mount chart-mount-heat"></div>
       </section>
 
-      <section class="panel" id="panel-taxonomy">
+      <section class="panel" id="panel-ridge">
         <header class="panel-head">
-          <h2 id="taxonomy-title">What the index measures</h2>
-          <span class="panel-hint">Slice size is this ward’s score · click a ring</span>
+          <h2>Daily rain, wettest wards</h2>
+          <span class="panel-hint">Ridgelines · last two weeks</span>
         </header>
-        <div id="taxonomy-chart" class="chart-mount chart-mount-theme"></div>
+        <div id="rain-ridge" class="chart-mount chart-mount-ridge"></div>
+      </section>
+
+      <section class="panel" id="panel-traces">
+        <header class="panel-head">
+          <h2 id="trace-title">This ward, last 48 hours</h2>
+          <span class="panel-hint">PM2.5, NO₂, ozone, rain</span>
+        </header>
+        <div id="ward-traces" class="chart-mount chart-mount-traces"></div>
       </section>
     </div>
 
     <footer class="ticker">
       <span class="ticker-tag">Note</span>
-      <p id="ticker-line">Index bones are MCAP + flood studies. Rain and AQI update from Open-Meteo.</p>
+      <p id="ticker-line">Feeds are Open-Meteo at ward centroids — modelled, not BMC gauges.</p>
     </footer>
   </div>
 
   <div id="mc-tooltip" class="mc-tooltip" role="tooltip" hidden></div>
 
   <script src="https://d3js.org/d3.v7.min.js"></script>
-  <script src="assets/js/mumbai-dashboard.js?v=1"></script>
-  <script src="assets/js/mumbai-charts.js?v=1"></script>
+  <script src="assets/js/mumbai-charts.js?v=live-3"></script>
+  <script src="assets/js/mumbai-dashboard.js?v=live-3"></script>
 </body>
 </html>

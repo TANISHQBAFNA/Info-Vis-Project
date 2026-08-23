@@ -1,676 +1,426 @@
-const MumbaiDash = {
-  state: {
-    ward: null,
-    theme: null,
-    rainKey: null,
-    band: "all",
-    intelMode: "overview"
-  },
-  data: {
+/**
+ * Mumbai live dashboard — Open-Meteo weather + air quality at 24 ward centroids.
+ */
+(function (global) {
+  "use strict";
+
+  const WARD_CSV  = "assets/data/mumbai/Wards.csv";
+  const NOTE_CSV  = "assets/data/mumbai/WardInfo.csv";
+  const THEMES    = "assets/data/mumbai/ExposureThemes.json";
+  const DEFAULT   = "ME";
+  const CACHE_MS  = 15 * 60 * 1000;
+
+  const AQI_STOPS = [
+    { max: 50,  label: "Good",        color: "#7a8f6a" },
+    { max: 100, label: "Moderate",    color: "#c4a574" },
+    { max: 150, label: "USG",         color: "#c47a3a" },
+    { max: 200, label: "Unhealthy",   color: "#b85c38" },
+    { max: 300, label: "Very unhlthy",color: "#8a3a28" },
+    { max: Infinity, label: "Hazardous", color: "#4a2c24" }
+  ];
+
+  function aqiColor(v) {
+    const n = +v;
+    if (!Number.isFinite(n)) return "#c8b8a4";
+    return AQI_STOPS.find(s => n <= s.max).color;
+  }
+  function aqiLabel(v) {
+    const n = +v;
+    if (!Number.isFinite(n)) return "—";
+    return AQI_STOPS.find(s => n <= s.max).label;
+  }
+
+  const MumbaiDash = {
     wards: [],
-    info: new Map(),
-    taxonomy: null,
-    daily: [],
-    dailyKeys: [],
-    live: { aqi: null, aqiWard: null, rainToday: null, source: "pending" }
-  },
-  focus: [
-    { id: "ME", key: "Govandi" },
-    { id: "FN", key: "Sion" },
-    { id: "L", key: "Kurla" },
-    { id: "N", key: "Ghatkopar" },
-    { id: "GN", key: "Dadar" }
-  ],
+    themes: null,
+    selectedId: DEFAULT,
+    liveOk: false,
+    liveAt: null,
+    liveErr: null,
+    aqiColor,
+    aqiLabel,
 
-  async boot() {
-    const log = document.getElementById("boot-log");
-    const write = (msg) => { if (log) log.textContent = msg; };
+    selected() {
+      return this.wards.find(w => w.id === this.selectedId) || this.wards[0];
+    },
+    worstAqi() {
+      return this.wards.slice().sort((a, b) => (b.live?.now?.aqi || 0) - (a.live?.now?.aqi || 0))[0];
+    },
 
-    write("Loading 24 BMC wards…");
-    const rows = await d3.csv("assets/data/mumbai/Wards.csv", (d) => ({
+    boot() {
+      const log = document.getElementById("boot-log");
+      const screen = document.getElementById("boot-screen");
+      const line = (t) => { if (log) log.textContent = t; };
+      Promise.all([
+        d3.csv(WARD_CSV, parseWard),
+        d3.csv(NOTE_CSV),
+        d3.json(THEMES)
+      ]).then(([wards, notes, themes]) => {
+        line("WARDS 24");
+        const noteMap = new Map(notes.map(n => [n.ward, n]));
+        this.wards = wards.map(w => {
+          const n = noteMap.get(w.ward) || {};
+          return Object.assign(w, {
+            note: n.note || "",
+            zone: n.zone || w.zone,
+            live: emptyLive()
+          });
+        });
+        this.themes = themes;
+        this.selectedId = DEFAULT;
+        line("OPEN-METEO…");
+        return this.pullLive();
+      }).then(() => {
+        line(this.liveOk ? "LIVE" : "CACHE / FALLBACK");
+        this.mount();
+        if (screen) screen.classList.add("is-done");
+      }).catch(err => {
+        console.error(err);
+        line("LOAD FAIL — " + (err && err.message ? err.message : err));
+      });
+    },
+
+    pullLive() {
+      const cached = readCache();
+      if (cached && Date.now() - cached.at < CACHE_MS) {
+        this.applyLive(cached.payload, cached.at, true);
+        return Promise.resolve();
+      }
+      const BATCH = 8;
+      const jobs = [];
+      for (let i = 0; i < this.wards.length; i += BATCH) {
+        const slice = this.wards.slice(i, i + BATCH);
+        const lats = slice.map(w => w.lat).join(",");
+        const lons = slice.map(w => w.lon).join(",");
+        jobs.push(Promise.all([
+          fetchJson(weatherUrl(lats, lons)),
+          fetchJson(airUrl(lats, lons))
+        ]));
+      }
+      return Promise.all(jobs)
+        .then(results => {
+          const wx = [];
+          const aq = [];
+          results.forEach(([w, a]) => {
+            wx.push.apply(wx, asArr(w));
+            aq.push.apply(aq, asArr(a));
+          });
+          const payload = { wx, aq };
+          writeCache(payload);
+          this.applyLive(payload, Date.now(), false);
+        })
+        .catch(err => {
+          console.warn("live fetch failed", err);
+          this.liveErr = String(err && err.message ? err.message : err);
+          if (cached) this.applyLive(cached.payload, cached.at, true);
+          else this.liveOk = false;
+        });
+    },
+
+    applyLive(payload, at, fromCache) {
+      const wx = payload.wx || [];
+      const aq = payload.aq || [];
+      this.wards.forEach((w, i) => {
+        w.live = stitch(wx[i], aq[i]);
+      });
+      this.liveOk = this.wards.some(w => Number.isFinite(w.live.now.aqi));
+      this.liveAt = at;
+      this.fromCache = fromCache;
+    },
+
+    mount() {
+      const dash = document.querySelector(".dashboard");
+      if (dash) dash.hidden = false;
+      this.renderKpis();
+      this.renderSearch();
+      this.renderAbout();
+      this.drawAll();
+      this.bind();
+      this.stamp();
+    },
+
+    drawAll() {
+      if (!global.MXViz) return;
+      const sel = this.selected();
+      MXViz.drawMap(this.wards, sel);
+      MXViz.drawHeat(this.wards, sel);
+      MXViz.drawRidge(this.wards, sel);
+      MXViz.drawTraces(this.wards, sel);
+      this.renderAbout();
+      this.stamp();
+    },
+
+    selectWard(id) {
+      if (!id || !this.wards.some(w => w.id === id)) return;
+      this.selectedId = id;
+      document.getElementById("ward-search").value = this.selected().ward;
+      this.drawAll();
+    },
+
+    renderKpis() {
+      const row = document.getElementById("kpi-row");
+      if (!row) return;
+      const n = this.wards.length;
+      const worst = this.worstAqi();
+      const maxAqi = worst && worst.live ? worst.live.now.aqi : NaN;
+      const raining = this.wards.filter(w => (w.live.now.rain || 0) > 0.1).length;
+      const wettest = this.wards.slice().sort((a, b) =>
+        d3.sum(b.live.rain14, d => d.rain) - d3.sum(a.live.rain14, d => d.rain)
+      )[0];
+      const wetMm = wettest ? d3.sum(wettest.live.rain14, d => d.rain) : 0;
+      row.innerHTML = [
+        kpi("WARDS", n, "BMC administrative"),
+        kpi("WORST AQI", Number.isFinite(maxAqi) ? Math.round(maxAqi) : "—",
+          worst ? worst.short + " · " + aqiLabel(maxAqi) : "awaiting live"),
+        kpi("RAINING NOW", raining, raining ? "centroid(s) > 0.1 mm" : "dry at centroids"),
+        kpi("14-DAY RAIN", Math.round(wetMm) + " mm", wettest ? "peak · " + wettest.short : "—")
+      ].join("");
+    },
+
+    renderSearch() {
+      const input = document.getElementById("ward-search");
+      const list = document.getElementById("ward-results");
+      const close = () => { list.hidden = true; list.innerHTML = ""; };
+      const open = (q) => {
+        const s = (q || "").trim().toLowerCase();
+        const hits = this.wards.filter(w =>
+          !s || w.ward.toLowerCase().includes(s) || w.places.toLowerCase().includes(s) ||
+          w.id.toLowerCase() === s
+        ).slice(0, 12);
+        list.innerHTML = hits.map(w =>
+          `<button type="button" role="option" data-id="${w.id}">
+            <strong>${esc(w.ward)}</strong>
+            <span>${esc(w.places)}</span>
+          </button>`
+        ).join("");
+        list.hidden = !hits.length;
+      };
+      input.addEventListener("focus", () => open(input.value));
+      input.addEventListener("input", () => open(input.value));
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") { input.blur(); close(); }
+      });
+      list.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-id]");
+        if (!btn) return;
+        this.selectWard(btn.getAttribute("data-id"));
+        close();
+      });
+      document.addEventListener("click", (e) => {
+        if (!e.target.closest(".command-bar")) close();
+      });
+      input.value = this.selected().ward;
+    },
+
+    renderAbout() {
+      const w = this.selected();
+      const title = document.getElementById("about-title");
+      const stamp = document.getElementById("about-stamp");
+      const feed = document.getElementById("about-feed");
+      if (!w || !feed) return;
+      title.textContent = w.ward;
+      stamp.textContent = this.liveOk
+        ? (this.fromCache ? "cached live · " : "live · ") + fmtWhen(this.liveAt)
+        : (this.liveErr ? "feed error · static notes" : "awaiting feed");
+      const now = w.live.now;
+      const rain14 = d3.sum(w.live.rain14, d => d.rain);
+      const rain48 = d3.sum(w.live.hours48, d => d.rain);
+      feed.innerHTML =
+        `<p class="intel-lede">${esc(w.places)} · ${esc(w.zone)} zone · ${fmtPop(w.pop)} · ${w.area} km²</p>
+         <dl class="live-dl">
+           <div><dt>US AQI</dt><dd style="color:${aqiColor(now.aqi)}">${fmtNum(now.aqi, 0)} <small>${esc(aqiLabel(now.aqi))}</small></dd></div>
+           <div><dt>PM2.5</dt><dd>${fmtNum(now.pm25, 1)} µg/m³</dd></div>
+           <div><dt>NO₂</dt><dd>${fmtNum(now.no2, 1)} µg/m³</dd></div>
+           <div><dt>Ozone</dt><dd>${fmtNum(now.o3, 1)} µg/m³</dd></div>
+           <div><dt>Temp / RH</dt><dd>${fmtNum(now.temp, 1)}°C · ${fmtNum(now.humidity, 0)}%</dd></div>
+           <div><dt>Rain now</dt><dd>${fmtNum(now.rain, 1)} mm</dd></div>
+           <div><dt>Rain 48h</dt><dd>${fmtNum(rain48, 1)} mm</dd></div>
+           <div><dt>Rain 14d</dt><dd>${fmtNum(rain14, 0)} mm</dd></div>
+         </dl>
+         <p>${esc(w.note)}</p>
+         <p class="combo-meta">Hotspots ${esc(w.hotspots)}. Slum share of area ${w.slum}%. Exposure index ${w.index.toFixed(2)} is a static composite — live AQI and rain sit on top, they do not replace it.</p>
+         <p class="combo-meta">Centroid ${w.lat.toFixed(3)}°N, ${w.lon.toFixed(3)}°E. Open-Meteo weather + air-quality APIs, Asia/Kolkata. ${this.liveErr ? "Last error: " + esc(this.liveErr) : "No key required."}</p>`;
+    },
+
+    stamp() {
+      const el = document.getElementById("live-stamp");
+      const tick = document.getElementById("ticker-line");
+      if (el) {
+        el.textContent = this.liveOk
+          ? (this.fromCache ? "cached " : "live ") + fmtWhen(this.liveAt)
+          : "live feed down";
+      }
+      if (tick) {
+        const w = this.selected();
+        const worst = this.worstAqi();
+        tick.textContent = this.liveOk
+          ? `${w.short} AQI ${fmtNum(w.live.now.aqi, 0)} (${aqiLabel(w.live.now.aqi)}) · worst now ${worst.short} ${fmtNum(worst.live.now.aqi, 0)} · rain-now ${this.wards.filter(x => x.live.now.rain > 0.1).length}/24 wards`
+          : "Open-Meteo unreachable from this origin. Notes still load. Retry in a few minutes.";
+      }
+    },
+
+    bind() {
+      document.getElementById("btn-reset").addEventListener("click", () => {
+        this.selectWard(DEFAULT);
+      });
+      let t;
+      window.addEventListener("resize", () => {
+        clearTimeout(t);
+        t = setTimeout(() => this.drawAll(), 160);
+      });
+    },
+
+    tip(html, x, y) {
+      const el = document.getElementById("mc-tooltip");
+      if (!html) { el.hidden = true; return; }
+      el.innerHTML = html;
+      el.hidden = false;
+      const r = el.getBoundingClientRect();
+      let left = x + 14, top = y + 14;
+      if (left + r.width > innerWidth - 8) left = x - r.width - 10;
+      if (top + r.height > innerHeight - 8) top = y - r.height - 10;
+      el.style.left = left + "px";
+      el.style.top = top + "px";
+    }
+  };
+
+  function parseWard(d) {
+    const name = d.ward;
+    return {
       id: d.id,
-      ward: d.ward,
+      ward: name,
+      short: name.split("·")[0].trim(),
       places: d.places,
-      population: +d.population,
+      pop: +d.population,
       area: +d.area_km2,
       lat: +d.lat,
       lon: +d.lon,
-      theme1: +d.flood,
-      theme2: +d.heat,
-      theme3: +d.air,
-      theme4: +d.services,
-      svi: +d.index,
-      hotspots: +d.hotspots,
+      flood: +d.flood, heat: +d.heat, air: +d.air, services: +d.services,
+      index: +d.index,
+      hotspots: d.hotspots,
       slum: +d.slum_pct,
       zone: d.zone
-    }));
+    };
+  }
 
-    write("Loading ward notes…");
-    const infoRows = await d3.csv("assets/data/mumbai/WardInfo.csv", (d) => ({
-      ward: d.ward,
-      places: d.places,
-      zone: d.zone,
-      note: d.note
-    }));
+  function emptyLive() {
+    return {
+      now: { temp: NaN, humidity: NaN, rain: 0, aqi: NaN, pm25: NaN, no2: NaN, o3: NaN },
+      hours24: [], hours48: [], rain14: [], rainToday: 0
+    };
+  }
 
-    write("Loading index themes…");
-    const taxonomy = await d3.json("assets/data/mumbai/ExposureThemes.json");
-
-    const info = new Map();
-    infoRows.forEach((row) => info.set(row.ward, row));
-    rows.forEach((row, i) => {
-      row.rank = i + 1;
-      row.info = info.get(row.ward) || null;
-      row.band = bandOf(row.svi);
-    });
-
-    this.data.wards = rows;
-    this.data.info = info;
-    this.data.taxonomy = taxonomy;
-
-    write("Fetching live rain and AQI…");
-    await this.loadLive();
-
-    this.renderKpis();
-    this.renderLegend();
-    this.bindChrome();
-    document.querySelector(".dashboard").hidden = false;
-    this.observeResize();
-    this.drawAll();
-    this.selectWard("M East · Govandi", { mode: "ward" });
-    this.lockComboToChart();
-    document.getElementById("boot-screen").classList.add("is-done");
-    this.startClocks();
-  },
-
-  async loadLive() {
-    const stamp = document.getElementById("live-stamp");
-    const hint = document.getElementById("rain-hint");
-    try {
-      const lats = this.focus.map((f) => this.wardById(f.id).lat).join(",");
-      const lons = this.focus.map((f) => this.wardById(f.id).lon).join(",");
-      const rainUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&daily=precipitation_sum&past_days=14&forecast_days=1&timezone=Asia%2FKolkata`;
-      const aqiUrl = "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=19.076&longitude=72.8777&current=pm2_5,us_aqi,european_aqi&timezone=Asia%2FKolkata";
-      const [rainRes, aqiRes] = await Promise.all([fetch(rainUrl), fetch(aqiUrl)]);
-      if (!rainRes.ok || !aqiRes.ok) throw new Error("live feed unavailable");
-      const rainJson = await rainRes.json();
-      const aqiJson = await aqiRes.json();
-      const series = Array.isArray(rainJson) ? rainJson : [rainJson];
-      const times = series[0].daily.time;
-      const keys = this.focus.map((f) => f.key);
-      this.data.dailyKeys = keys;
-      this.data.daily = times.map((t, i) => {
-        const row = { date: d3.isoParse(t) };
-        series.forEach((loc, li) => {
-          row[keys[li]] = +(loc.daily.precipitation_sum[i] || 0);
-        });
-        return row;
+  function stitch(wx, aq) {
+    const live = emptyLive();
+    if (!wx && !aq) return live;
+    const curW = wx && wx.current || {};
+    const curA = aq && aq.current || {};
+    live.now = {
+      temp: +curW.temperature_2m,
+      humidity: +curW.relative_humidity_2m,
+      rain: +curW.precipitation || 0,
+      aqi: +curA.us_aqi,
+      pm25: +curA.pm2_5,
+      no2: +curA.nitrogen_dioxide,
+      o3: +curA.ozone
+    };
+    const wH = (wx && wx.hourly) || {};
+    const aH = (aq && aq.hourly) || {};
+    const precip = wH.precipitation || [];
+    const byW = new Map();
+    (wH.time || []).forEach((t, i) => byW.set(t, +precip[i] || 0));
+    const aqi = aH.us_aqi || [];
+    const pm = aH.pm2_5 || [];
+    const no2 = aH.nitrogen_dioxide || [];
+    const o3 = aH.ozone || [];
+    const hours = [];
+    (aH.time || []).forEach((t, i) => {
+      hours.push({
+        t,
+        date: parseIst(t),
+        aqi: +aqi[i],
+        pm25: +pm[i],
+        no2: +no2[i],
+        o3: +o3[i],
+        rain: byW.has(t) ? byW.get(t) : 0
       });
-      const last = this.data.daily[this.data.daily.length - 1];
-      this.data.live.rainToday = last ? keys.reduce((s, k) => s + last[k], 0) / keys.length : null;
-      this.data.live.aqi = aqiJson.current;
-      this.data.live.source = "Open-Meteo";
-      if (stamp) stamp.textContent = `Rain + AQI · ${times[times.length - 1]}`;
-      if (hint) hint.textContent = "Last 15 days · Open-Meteo · click a layer";
-    } catch (err) {
-      console.warn(err);
-      this.data.live.source = "offline";
-      this.buildFallbackRain();
-      if (stamp) stamp.textContent = "Index only · live feed offline";
-      if (hint) hint.textContent = "Sample monsoon week · live rain unavailable";
-    }
-  },
-
-  async loadWardAqi(row) {
-    if (!row) return;
-    try {
-      const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${row.lat}&longitude=${row.lon}&current=pm2_5,us_aqi&timezone=Asia%2FKolkata`;
-      const res = await fetch(url);
-      if (!res.ok) return;
-      const json = await res.json();
-      this.data.live.aqiWard = { ward: row.ward, ...json.current };
-      this.renderIntel();
-    } catch (_) { /* keep city AQI */ }
-  },
-
-  buildFallbackRain() {
-    const keys = this.focus.map((f) => f.key);
-    this.data.dailyKeys = keys;
-    const start = new Date("2026-08-09T00:00:00+05:30");
-    const sample = {
-      Govandi: [6, 8, 24, 18, 15, 9, 22, 14, 12, 9, 5, 3, 8, 12, 8],
-      Sion: [5, 7, 21, 16, 14, 8, 20, 13, 11, 8, 5, 3, 8, 11, 7],
-      Kurla: [7, 9, 26, 19, 16, 10, 23, 15, 13, 9, 5, 3, 9, 12, 8],
-      Ghatkopar: [5, 7, 22, 14, 13, 7, 20, 13, 12, 8, 5, 3, 8, 11, 7],
-      Dadar: [4, 6, 18, 12, 11, 6, 16, 11, 10, 7, 4, 2, 7, 10, 6]
-    };
-    this.data.daily = sample.Govandi.map((_, i) => {
-      const date = new Date(start.getTime() + i * 86400000);
-      const row = { date };
-      keys.forEach((k) => { row[k] = sample[k][i]; });
-      return row;
     });
-    this.data.live.rainToday = 7.2;
-  },
-
-  wardById(id) {
-    return this.data.wards.find((d) => d.id === id);
-  },
-
-  drawAll() {
-    if (window.MXViz?.drawCircular) MXViz.drawCircular();
-    if (window.MXViz?.drawRadar) MXViz.drawRadar();
-    if (window.MXViz?.drawRain) MXViz.drawRain();
-    if (window.MXViz?.drawTaxonomy) MXViz.drawTaxonomy();
-    this.lockComboToChart();
-  },
-
-  lockComboToChart() {
-    const chart = document.getElementById("panel-array");
-    const notes = document.getElementById("panel-intel");
-    if (!chart || !notes) return;
-    if (window.matchMedia("(max-width: 760px)").matches) {
-      notes.style.height = "";
-      notes.style.maxHeight = "";
-      return;
-    }
-    const apply = () => {
-      const h = Math.round(chart.getBoundingClientRect().height);
-      if (h > 0) {
-        notes.style.height = `${h}px`;
-        notes.style.maxHeight = `${h}px`;
-      }
-    };
-    apply();
-    requestAnimationFrame(apply);
-  },
-
-  observeResize() {
-    const redraw = debounce(() => this.drawAll(), 160);
-    const ro = new ResizeObserver(redraw);
-    ["circular-chart", "radar-chart", "stacked-chart", "taxonomy-chart"].forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) ro.observe(el);
-    });
-    const comboChart = document.getElementById("panel-array");
-    if (comboChart) {
-      const lock = debounce(() => this.lockComboToChart(), 80);
-      new ResizeObserver(lock).observe(comboChart);
-    }
-    window.addEventListener("resize", debounce(() => this.lockComboToChart(), 80));
-  },
-
-  bindChrome() {
-    document.getElementById("btn-reset").addEventListener("click", () => this.reset());
-    document.getElementById("kpi-row").addEventListener("click", (e) => {
-      const btn = e.target.closest(".kpi");
-      if (!btn) return;
-      this.selectBand(btn.dataset.band);
-    });
-    const input = document.getElementById("ward-search");
-    const results = document.getElementById("ward-results");
-    input.addEventListener("input", () => this.renderSearch(input.value));
-    input.addEventListener("focus", () => this.renderSearch(input.value));
-    document.addEventListener("click", (e) => {
-      if (!e.target.closest(".command-bar")) results.hidden = true;
-    });
-    results.addEventListener("click", (e) => {
-      const btn = e.target.closest("button[data-ward]");
-      if (!btn) return;
-      input.value = btn.dataset.ward;
-      results.hidden = true;
-      this.selectWard(btn.dataset.ward);
-    });
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") this.reset();
-      if (e.key === "/" && document.activeElement !== input) {
-        e.preventDefault();
-        input.focus();
-      }
-    });
-  },
-
-  renderSearch(query) {
-    const results = document.getElementById("ward-results");
-    const q = (query || "").trim().toLowerCase();
-    const matches = this.data.wards
-      .filter((d) => !q || d.ward.toLowerCase().includes(q) || d.places.toLowerCase().includes(q))
-      .slice(0, 12);
-    results.innerHTML = matches
-      .map((d) => `<li><button type="button" data-ward="${escapeAttr(d.ward)}">${d.ward} · ${d.svi.toFixed(3)}</button></li>`)
-      .join("");
-    results.hidden = matches.length === 0;
-  },
-
-  renderKpis() {
-    const counts = { high: 0, "mod-high": 0, "mod-low": 0, low: 0 };
-    this.data.wards.forEach((d) => { counts[d.band] += 1; });
-    const rain = this.data.live.rainToday;
-    const aqi = this.data.live.aqi?.us_aqi;
-    const kpis = [
-      { band: "all", label: "BMC wards", value: String(this.data.wards.length), sub: "Greater Mumbai", accent: "var(--ink)" },
-      { band: "high", label: "High exposure", value: String(counts.high), sub: "Index ≥ 0.75", accent: "var(--high)" },
-      { band: "mod-high", label: "Moderate–high", value: String(counts["mod-high"]), sub: "0.50 – 0.75", accent: "var(--mod-high)" },
-      { band: "low", label: "Low exposure", value: String(counts.low), sub: "Index ≤ 0.25", accent: "var(--low)" },
-      {
-        band: "focus",
-        label: aqi != null ? "City AQI (US)" : "Rain, 5 wards",
-        value: aqi != null ? String(Math.round(aqi)) : (rain != null ? `${rain.toFixed(1)} mm` : "—"),
-        sub: aqi != null ? `PM2.5 ${Math.round(this.data.live.aqi.pm2_5)} µg/m³ · today` : "Open-Meteo today",
-        accent: "var(--accent)"
-      }
-    ];
-    document.getElementById("kpi-row").innerHTML = kpis.map((k) => `
-      <button class="kpi${this.state.band === k.band ? " is-active" : ""}" data-band="${k.band}" style="--kpi-accent:${k.accent}">
-        <span class="kpi-label">${k.label}</span>
-        <span class="kpi-value">${k.value}</span>
-        <span class="kpi-sub">${k.sub}</span>
-      </button>
-    `).join("");
-  },
-
-  renderLegend() {
-    const items = [
-      { band: "high", label: "High ≥ 0.75", color: "var(--high)" },
-      { band: "mod-high", label: "Moderate–high", color: "var(--mod-high)" },
-      { band: "mod-low", label: "Moderate–low", color: "var(--mod-low)" },
-      { band: "low", label: "Low ≤ 0.25", color: "var(--low)" }
-    ];
-    document.getElementById("array-legend").innerHTML = items.map((item) => `
-      <button class="legend-swatch" data-band="${item.band}" type="button">
-        <i style="background:${item.color}"></i>${item.label}
-      </button>
-    `).join("");
-    document.getElementById("array-legend").addEventListener("click", (e) => {
-      const btn = e.target.closest("[data-band]");
-      if (btn) this.selectBand(btn.dataset.band);
-    });
-  },
-
-  startClocks() {
-    this.tickerIndex = 0;
-    this.updateTicker();
-    setInterval(() => {
-      this.tickerIndex += 1;
-      this.updateTicker();
-    }, 5200);
-  },
-
-  updateTicker() {
-    const items = this.tickerItems();
-    document.getElementById("ticker-line").textContent = items[this.tickerIndex % items.length];
-  },
-
-  tickerItems() {
-    const top = this.data.wards[0];
-    const bottom = this.data.wards[this.data.wards.length - 1];
-    const items = [
-      "Four themes: flood/drainage, heat/housing, air/health, services/density. Ranked across 24 BMC wards.",
-      `${top.ward} sits at the top of the index (${top.svi.toFixed(3)}).`,
-      `${bottom.ward} ranks lowest (${bottom.svi.toFixed(3)}).`,
-      "F North holds the most BMC flood hotspots. M East is the MCAP heat hotspot.",
-      "Rain layers are Open-Meteo. The index itself is a synthesis of MCAP, IISER flood vulnerability, and census structure — not a BMC official score.",
-      "August 2026: monsoon, high tide, Ghatkopar landslide, malaria up. That is the live story, not COVID."
-    ];
-    const row = this.selectedRow();
-    if (row) items.unshift(`${row.ward} · index ${row.svi.toFixed(3)} · rank ${row.rank} of 24`);
-    if (this.state.theme) items.unshift(`Theme: ${this.state.theme}`);
-    return items;
-  },
-
-  selectedRow() {
-    return this.data.wards.find((d) => d.ward === this.state.ward) || null;
-  },
-
-  selectWard(name, opts = {}) {
-    const row = this.data.wards.find((d) => d.ward === name);
-    if (!row) return;
-    this.state.ward = row.ward;
-    const focus = this.focus.find((f) => f.id === row.id);
-    this.state.rainKey = focus ? focus.key : this.state.rainKey;
-    this.state.intelMode = opts.mode || "ward";
-    if (opts.theme) this.state.theme = opts.theme;
-    this.sync();
-    this.loadWardAqi(row);
-  },
-
-  selectTheme(name) {
-    this.state.theme = name;
-    this.state.intelMode = "theme";
-    this.sync();
-  },
-
-  selectBand(band) {
-    if (this.state.band === band && band !== "all") {
-      this.state.band = "all";
-      this.state.intelMode = "overview";
-      this.sync();
-      return;
-    }
-    this.state.band = band;
-    if (band === "focus") {
-      this.state.intelMode = "rain";
-      this.state.rainKey = this.state.rainKey || "Govandi";
-      const id = this.focus.find((f) => f.key === this.state.rainKey)?.id;
-      const row = this.wardById(id) || this.data.wards[0];
-      this.selectWard(row.ward, { mode: "rain" });
-      return;
-    }
-    this.state.intelMode = band === "all" ? "overview" : "band";
-    this.sync();
-  },
-
-  selectRainKey(key) {
-    this.state.rainKey = key;
-    const id = this.focus.find((f) => f.key === key)?.id;
-    const row = this.wardById(id);
-    if (row) this.selectWard(row.ward, { mode: "rain" });
-    else {
-      this.state.intelMode = "rain";
-      this.sync();
-    }
-  },
-
-  reset() {
-    this.state.ward = "M East · Govandi";
-    this.state.theme = null;
-    this.state.rainKey = "Govandi";
-    this.state.band = "all";
-    this.state.intelMode = "overview";
-    document.getElementById("ward-search").value = "";
-    this.sync();
-  },
-
-  sync() {
-    this.renderKpis();
-    this.renderIntel();
-    this.updateTicker();
-    if (window.MXViz?.updateCircular) MXViz.updateCircular();
-    if (window.MXViz?.drawRadar) MXViz.drawRadar();
-    if (window.MXViz?.updateRain) MXViz.updateRain();
-    if (window.MXViz?.updateTaxonomy) MXViz.updateTaxonomy();
-  },
-
-  renderIntel() {
-    const feed = document.getElementById("intel-feed");
-    const stamp = document.getElementById("intel-stamp");
-    const title = document.getElementById("intel-title");
-    const radarTitle = document.getElementById("radar-title");
-    const taxonomyTitle = document.getElementById("taxonomy-title");
-    const ward = this.state.ward;
-    if (title) title.textContent = ward ? `About ${ward}` : "About this ward";
-    if (radarTitle) radarTitle.textContent = ward ? `Exposure themes for ${ward}` : "Exposure themes for this ward";
-    if (taxonomyTitle) taxonomyTitle.textContent = ward ? `What the index measures in ${ward}` : "What the index measures";
-    const mode = this.state.intelMode;
-    stamp.textContent =
-      mode === "ward" ? "Ward" :
-      mode === "theme" ? "Theme" :
-      mode === "band" ? "Band" :
-      mode === "rain" ? "Rainfall" :
-      "Overview";
-
-    if (mode === "theme") feed.innerHTML = this.themeIntel();
-    else if (mode === "band") feed.innerHTML = this.bandIntel();
-    else if (mode === "rain") feed.innerHTML = this.rainIntel();
-    else if (mode === "ward") feed.innerHTML = this.wardIntel();
-    else feed.innerHTML = this.overviewIntel();
-
-    feed.querySelectorAll("[data-ward]").forEach((el) => {
-      el.addEventListener("click", () => this.selectWard(el.dataset.ward));
-    });
-    feed.querySelectorAll("[data-theme]").forEach((el) => {
-      el.addEventListener("click", () => this.selectTheme(el.dataset.theme));
-    });
-    feed.querySelectorAll("[data-rain]").forEach((el) => {
-      el.addEventListener("click", () => this.selectRainKey(el.dataset.rain));
-    });
-    this.lockComboToChart();
-  },
-
-  overviewIntel() {
-    const high = this.data.wards.filter((d) => d.band === "high").length;
-    const top = this.data.wards.slice(0, 5);
-    const bottom = this.data.wards.slice(-5).reverse();
-    return `
-      <p class="intel-kicker">Overview</p>
-      <h3>Mumbai’s risk is not even</h3>
-      <p class="intel-lede">Monsoon 2026 is the live layer: rain, high tide, waterlogging, a Ghatkopar landslide, malaria up. The bones of the index are slower — flood studies, heat maps, air, housing.</p>
-      <p class="intel-body">24 BMC administrative wards. ${high} sit in the high band. Click a bar, a ring, an axis, or a rain layer. The circular chart ranks a monsoon-weighted composite: flood 35%, heat 25%, air 20%, services 20%, then percentile-ranked like SVI.</p>
-      <div class="callout">This is not a BMC official score. Theme signals come from MCAP (2022), IISER combined flood vulnerability (2025), OpenCity census structure, and typical AQI geography. Rain and AQI are live Open-Meteo.</div>
-      <p class="intel-kicker">Highest exposure</p>
-      <div class="chip-list">${top.map((d) => `<button class="chip" data-ward="${escapeAttr(d.ward)}" type="button">${d.ward}</button>`).join("")}</div>
-      <p class="intel-kicker">Lowest exposure</p>
-      <div class="chip-list">${bottom.map((d) => `<button class="chip" data-ward="${escapeAttr(d.ward)}" type="button">${d.ward}</button>`).join("")}</div>
-    `;
-  },
-
-  wardIntel() {
-    const row = this.selectedRow();
-    if (!row) return this.overviewIntel();
-    const density = row.population && row.area ? row.population / row.area : null;
-    const meters = [
-      ["Flood / drainage", row.theme1, "Flood / drainage"],
-      ["Heat / housing", row.theme2, "Heat / housing"],
-      ["Air / health", row.theme3, "Air / health"],
-      ["Services / density", row.theme4, "Services / density"]
-    ];
-    const aqi = this.data.live.aqiWard?.ward === row.ward ? this.data.live.aqiWard : this.data.live.aqi;
-    const focus = this.focus.find((f) => f.id === row.id);
-    return `
-      <p class="intel-kicker">${row.zone}</p>
-      <h3>${row.ward}</h3>
-      <p class="intel-lede">${bandLabel(row.band)} · rank ${row.rank} of 24 · index ${row.svi.toFixed(4)}</p>
-      <p class="intel-body">${row.places}</p>
-      <div class="stat-grid">
-        <div class="stat-card"><span>Population (2011)</span><strong>${row.population.toLocaleString()}</strong></div>
-        <div class="stat-card"><span>Area</span><strong>${row.area.toLocaleString()} km²</strong></div>
-        <div class="stat-card"><span>Density</span><strong>${density ? Math.round(density).toLocaleString() + " /km²" : "—"}</strong></div>
-        <div class="stat-card"><span>Flood hotspots</span><strong>${row.hotspots}</strong></div>
-        <div class="stat-card"><span>Slum share (est.)</span><strong>${row.slum}%</strong></div>
-        <div class="stat-card"><span>${aqi?.us_aqi != null ? "AQI (US)" : "Live AQI"}</span><strong>${aqi?.us_aqi != null ? Math.round(aqi.us_aqi) : "—"}</strong></div>
-      </div>
-      <div class="meters">
-        ${meters.map(([label, value, theme]) => `
-          <button class="meter${this.state.theme === theme ? " is-active" : ""}" data-theme="${escapeAttr(theme)}" type="button">
-            <span class="meter-label">${label}</span>
-            <span class="meter-track"><span class="meter-fill" style="width:${value * 100}%;background:${bandColor(value)}"></span></span>
-            <span class="meter-val">${value.toFixed(3)}</span>
-          </button>
-        `).join("")}
-      </div>
-      <p class="intel-body">${row.info?.note || wardAssessment(row)}</p>
-      ${focus ? `<div class="callout">This ward is in the rainfall chart. Open the <button class="chip" data-rain="${focus.key}" type="button">${focus.key}</button> layer.</div>` : ""}
-    `;
-  },
-
-  themeIntel() {
-    const name = this.state.theme;
-    const copy = FACTORS[name] || FACTORS["Mumbai Exposure Index"];
-    const row = this.selectedRow();
-    const value = themeValue(row, name);
-    return `
-      <p class="intel-kicker">${copy.kicker}</p>
-      <h3>${name}</h3>
-      ${value != null ? `<p class="intel-lede">${row.ward} scores ${(+value).toFixed(4)} on this axis.</p>` : ""}
-      <p class="intel-body">${copy.body}</p>
-      ${copy.leaves ? `<p class="intel-kicker">Related factors</p><div class="chip-list">${copy.leaves.map((leaf) => `<button class="chip" data-theme="${escapeAttr(leaf)}" type="button">${leaf}</button>`).join("")}</div>` : ""}
-      <p class="intel-body">${copy.why}</p>
-    `;
-  },
-
-  bandIntel() {
-    const band = this.state.band;
-    const rows = this.data.wards.filter((d) => d.band === band);
-    const sample = rows.slice(0, 8);
-    const copy = BAND_COPY[band] || BAND_COPY.high;
-    return `
-      <p class="intel-kicker">${bandLabel(band)}</p>
-      <h3>${rows.length} wards</h3>
-      <p class="intel-body">${copy}</p>
-      <div class="chip-list">
-        ${sample.map((d) => `<button class="chip" data-ward="${escapeAttr(d.ward)}" type="button">${d.ward} ${d.svi.toFixed(2)}</button>`).join("")}
-      </div>
-    `;
-  },
-
-  rainIntel() {
-    const key = this.state.rainKey || "Govandi";
-    const focus = this.focus.find((f) => f.key === key);
-    const row = this.wardById(focus?.id);
-    const series = this.data.daily;
-    const peak = series.length ? d3.greatest(series, (d) => d[key]) : null;
-    const today = series[series.length - 1];
-    return `
-      <p class="intel-kicker">Rainfall</p>
-      <h3>${key}</h3>
-      <p class="intel-lede">${row ? row.ward : ""} · last 15 days of precipitation</p>
-      <div class="stat-grid">
-        <div class="stat-card"><span>Today (or latest)</span><strong>${today ? today[key].toFixed(1) + " mm" : "—"}</strong></div>
-        <div class="stat-card"><span>Peak day</span><strong>${peak ? peak[key].toFixed(1) + " mm" : "—"}</strong></div>
-      </div>
-      <p class="intel-body">Open-Meteo point forecast at the ward centroid — not a BMC rain gauge. Use it as a live monsoon pulse next to the slower exposure index. ${row && row.theme1 >= 0.75 ? "This ward already sits high on flood/drainage, so the same millimetres matter more." : ""}</p>
-      <p class="intel-kicker">Other rain layers</p>
-      <div class="chip-list">${this.focus.map((f) => `<button class="chip" data-rain="${f.key}" type="button">${f.key}</button>`).join("")}</div>
-    `;
+    const now = Date.now();
+    live.hours48 = hours.filter(h => +h.date <= now).slice(-48);
+    live.hours24 = live.hours48.slice(-24);
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    const days = (wx && wx.daily && wx.daily.time) || [];
+    const rainD = (wx && wx.daily && wx.daily.precipitation_sum) || [];
+    live.rain14 = days.map((day, i) => ({ day, rain: +rainD[i] || 0 }))
+      .filter(d => d.day <= today)
+      .slice(-14);
+    const todayRow = live.rain14.find(d => d.day === today);
+    live.rainToday = todayRow ? todayRow.rain : (live.rain14.length ? live.rain14[live.rain14.length - 1].rain : 0);
+    return live;
   }
-};
 
-const FACTORS = {
-  "Mumbai Exposure Index": {
-    kicker: "Index",
-    body: "A 0–1 rank across 24 BMC wards. Flood is weighted highest (it is August). Heat, air, and services fill the rest. Percentile ranking makes the circular chart comparable to the Virginia SVI grammar.",
-    why: "The point is not a fake official number. It is a way to see which wards stack hazards.",
-    leaves: ["Flood / drainage", "Heat / housing", "Air / health", "Services / density"]
-  },
-  "Flood / drainage": {
-    kicker: "Theme",
-    body: "Waterlogging hotspots, coastal outfalls, nallahs, reclamation, and high-tide lock. F North has the most BMC hotspots. Thirteen wards sit in IISER’s 2025 high flood-vulnerability band, including Colaba, Worli, Dadar, Govandi, Andheri, and Kandivali.",
-    why: "Rain millimetres are citywide. Who floods is local.",
-    leaves: ["Waterlogging hotspots", "Coastal outfalls & high tide", "Stormwater / nallahs", "Low-lying reclamation"]
-  },
-  "Heat / housing": {
-    kicker: "Theme",
-    body: "Land surface temperature, informal housing, canopy, crowding. MCAP: M East has over 40% of people on surfaces hotter than 35°C. Metal roofs and missing trees turn the same heatwave into different wards.",
-    why: "Heat is the slow disaster between monsoons.",
-    leaves: ["Land surface temperature", "Informal housing / slums", "Tree canopy", "Crowding"]
-  },
-  "Air / health": {
-    kicker: "Theme",
-    body: "PM2.5, NO2, dumps, industry, and monsoon disease. Deonar, Trombay, Kurla, the airport belt, and Byculla sit higher. Live AQI is Open-Meteo at the ward point. BMC’s 2026 monsoon watch: malaria up, dengue breeding sites still active.",
-    why: "Winter will make this theme the live layer. In August it still marks who lives next to the dump and the highway.",
-    leaves: ["PM2.5 & NO2", "Industry & dumps", "Monsoon vector disease"]
-  },
-  "Services / density": {
-    kicker: "Theme",
-    body: "Density, sanitation, open space, last-mile drains. Dharavi (H East), M East, Kurla, and Malad carry the service strain. A high score here means the same flood or heatwave hits more people with fewer exits.",
-    why: "This is the SVI-like bone inside a climate index.",
-    leaves: ["Population density", "Sanitation access", "Open space", "Last-mile drainage"]
-  },
-  "Waterlogging hotspots": { kicker: "Factor", body: "BMC-reported flooding spots. F North has 54 — the city high. Living within 250 m of a hotspot is the MCAP exposure metric.", why: "Hotspots are where rain becomes a civic event." },
-  "Coastal outfalls & high tide": { kicker: "Factor", body: "When the tide is up, stormwater cannot leave. BMC publishes tide times daily in monsoon. Island City and creek wards feel this first.", why: "Same rain, different clock." },
-  "Stormwater / nallahs": { kicker: "Factor", body: "Mithi, Poisar, Dahisar, Oshiwara. Encroached sections and debris turn a drain into a tank.", why: "Kurla and Andheri East live on this geometry." },
-  "Low-lying reclamation": { kicker: "Factor", body: "Backbay, Worli, Bandra-Kurla. New land, old outfalls.", why: "High land value, high flood list." },
-  "Land surface temperature": { kicker: "Factor", body: "Satellite heat, not the Colaba weather station. Eastern suburbs run hotter.", why: "M East is the MCAP heat example." },
-  "Informal housing / slums": { kicker: "Factor", body: "Metal, plastic, no setback, shared water. Heat, flood, and vector risk arrive together.", why: "Estimated slum share is in the ward cards — treat it as order-of-magnitude." },
-  "Tree canopy": { kicker: "Factor", body: "SGNP, Aarey, Malabar Hill vs Deonar and Dharavi.", why: "Canopy is the cheapest heat infrastructure." },
-  Crowding: { kicker: "Factor", body: "People per room, people per km². C ward is tiny and packed. M East is large and still packed.", why: "Density decides whether a hotspot is an inconvenience or a mass event." },
-  "PM2.5 & NO2": { kicker: "Factor", body: "CPCB / BMC / MPCB / IITM stations plus Open-Meteo. Winter is worse. The index still marks industrial and highway wards in monsoon.", why: "AQI is the live number; the theme is the geography." },
-  "Industry & dumps": { kicker: "Factor", body: "Deonar dumping ground, Trombay, Mahul, SEEPZ, the port.", why: "Air and stigma stack on the same wards as heat and flood." },
-  "Monsoon vector disease": { kicker: "Factor", body: "Malaria cases were up about 11% this season vs last. BMC found thousands of Aedes breeding sites. Stagnant floodwater is the mechanism.", why: "Health is not a separate dashboard in August." },
-  "Population density": { kicker: "Factor", body: "2011 census over BMC ward area. Island City compact wards vs sprawling T and R Central.", why: "Old census, still the best open ward table." },
-  "Sanitation access": { kicker: "Factor", body: "MCAP called out F North: only about half of households with a latrine in some pockets, on top of flood exposure.", why: "Flood plus toilets is a public-health sentence." },
-  "Open space": { kicker: "Factor", body: "Maidans, mangroves, SGNP vs built-out Kurla and M East.", why: "Open space is flood storage and heat relief." },
-  "Last-mile drainage": { kicker: "Factor", body: "The pipe that does not exist inside a slum pocket. City-scale pumps do not drain a lane.", why: "This is why services is a theme, not a footnote." }
-};
-
-const BAND_COPY = {
-  high: "High exposure (≥ 0.75). These wards stack flood and/or heat with thin services. M East, Kurla, H East, F North, and K East sit here. The rain chart is drawn from this end of the index plus Ghatkopar (N) after the August 2026 landslide.",
-  "mod-high": "Moderate-to-high. Dadar, Byculla, Marine Lines, Kandivali, Bhandup. Not the worst scores, but enough stacked hazard that a heavy-rain-plus-tide day still finds them.",
-  "mod-low": "Low-to-moderate. Mixed island-city and western-suburb wards. One theme may still spike — check the radar.",
-  low: "Low exposure (≤ 0.25). Grant Road / Malabar Hill, Mulund, Bandra West, Borivali. More elevation, canopy, or services. They still flood in spots; they do not lead the city."
-};
-
-function wardAssessment(row) {
-  if (row.rank === 1) return "Highest composite exposure among the 24 wards. Other bars are ranked against this one.";
-  if (row.svi >= 0.75) return "High exposure. Flood and heat are not background; they are the operating environment.";
-  if (row.svi <= 0.25) return "Low on this index. More buffer on heat, air, or services — the radar sits closer to the origin.";
-  return "Mid-band. Click a radar axis to see which theme is carrying the risk.";
-}
-
-function themeValue(row, name) {
-  if (!row) return null;
-  if (name === "Mumbai Exposure Index") return row.svi;
-  if (name === "Flood / drainage") return row.theme1;
-  if (name === "Heat / housing") return row.theme2;
-  if (name === "Air / health") return row.theme3;
-  if (name === "Services / density") return row.theme4;
-  return null;
-}
-
-function bandOf(v) {
-  if (v > 0.75) return "high";
-  if (v > 0.5) return "mod-high";
-  if (v > 0.25) return "mod-low";
-  return "low";
-}
-
-function bandLabel(band) {
-  return {
-    high: "High exposure",
-    "mod-high": "Moderate to high exposure",
-    "mod-low": "Low to moderate exposure",
-    low: "Low exposure",
-    all: "All wards",
-    focus: "Five rain wards"
-  }[band] || band;
-}
-
-function bandColor(v) {
-  if (v > 0.75) return "#9c5a4e";
-  if (v > 0.5) return "#c48962";
-  if (v > 0.25) return "#cbb688";
-  return "#7d9a86";
-}
-
-function escapeAttr(s) {
-  return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
-}
-
-function debounce(fn, ms) {
-  let t;
-  return (...args) => {
-    clearTimeout(t);
-    t = setTimeout(() => fn(...args), ms);
-  };
-}
-
-function mountSize(id) {
-  const el = document.getElementById(id);
-  const r = el.getBoundingClientRect();
-  return { el, width: Math.max(160, r.width), height: Math.max(160, r.height) };
-}
-
-window.MXUtils = { bandOf, bandColor, bandLabel, themeValue, mountSize, debounce };
-
-MumbaiDash.tooltip = {
-  el: null,
-  show(event, html) {
-    const el = this.el || (this.el = document.getElementById("mc-tooltip"));
-    el.hidden = false;
-    el.innerHTML = html;
-    el.style.left = `${event.clientX + 12}px`;
-    el.style.top = `${event.clientY + 12}px`;
-  },
-  hide() {
-    const el = this.el || document.getElementById("mc-tooltip");
-    if (el) el.hidden = true;
+  function parseIst(t) {
+    if (!t) return new Date(NaN);
+    const s = String(t).replace(" ", "T");
+    if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(s)) return new Date(s);
+    return new Date(s + "+05:30");
   }
-};
 
-window.addEventListener("load", () => {
-  MumbaiDash.boot().catch((err) => {
-    const log = document.getElementById("boot-log");
-    if (log) log.textContent = "Could not load data — " + err.message;
-    console.error(err);
-  });
-});
+  function weatherUrl(lats, lons) {
+    return "https://api.open-meteo.com/v1/forecast"
+      + "?latitude=" + lats + "&longitude=" + lons
+      + "&current=temperature_2m,relative_humidity_2m,precipitation"
+      + "&hourly=precipitation"
+      + "&daily=precipitation_sum"
+      + "&past_days=14&forecast_days=1&timezone=Asia%2FKolkata";
+  }
+
+  function airUrl(lats, lons) {
+    return "https://air-quality-api.open-meteo.com/v1/air-quality"
+      + "?latitude=" + lats + "&longitude=" + lons
+      + "&current=us_aqi,pm2_5,nitrogen_dioxide,ozone"
+      + "&hourly=us_aqi,pm2_5,nitrogen_dioxide,ozone"
+      + "&past_days=2&forecast_days=1&timezone=Asia%2FKolkata";
+  }
+
+  function asArr(x) { return Array.isArray(x) ? x : [x]; }
+
+  function fetchJson(url) {
+    return fetch(url).then(r => {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    });
+  }
+
+  function cacheKey() { return "mx-live-v3"; }
+  function readCache() {
+    try { return JSON.parse(sessionStorage.getItem(cacheKey()) || "null"); }
+    catch (e) { return null; }
+  }
+  function writeCache(payload) {
+    try { sessionStorage.setItem(cacheKey(), JSON.stringify({ at: Date.now(), payload })); }
+    catch (e) { /* quota */ }
+  }
+
+  function kpi(k, v, s) {
+    return `<article class="kpi"><span class="kpi-label">${esc(k)}</span><span class="kpi-value">${v}</span><span class="kpi-sub">${esc(s)}</span></article>`;
+  }
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function fmtNum(v, d) {
+    return Number.isFinite(+v) ? (+v).toFixed(d) : "—";
+  }
+  function fmtPop(n) {
+    return n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : (n / 1e3).toFixed(0) + "k";
+  }
+  function fmtWhen(ms) {
+    if (!ms) return "—";
+    const d = new Date(ms);
+    return d.toLocaleString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" }) + " IST";
+  }
+
+  global.MumbaiDash = MumbaiDash;
+  MumbaiDash.boot();
+})(window);

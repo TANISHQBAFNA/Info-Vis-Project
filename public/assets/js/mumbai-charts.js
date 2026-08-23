@@ -1,366 +1,302 @@
-(function () {
-  const Viz = window.MXViz = window.MXViz || {};
-  const U = () => window.MXUtils;
-  let circularPaths;
-  let rainLayers;
+/**
+ * Mumbai live charts — lon/lat bubbles, 24h AQI heatmap, rain ridgelines, 48h traces.
+ * Reads MumbaiDash.wards[].live (Open-Meteo), never the Virginia chart modules.
+ */
+(function (global) {
+  "use strict";
 
-  const rainPalette = {
-    Govandi: "#7a3f3a",
-    Sion: "#a86b56",
-    Kurla: "#c48962",
-    Ghatkopar: "#d4a488",
-    Dadar: "#ead3c4"
-  };
+  const MXViz = {};
 
-  Viz.drawCircular = function () {
-    const { el, width, height } = U().mountSize("circular-chart");
+  function sizeOf(id) {
+    const el = document.getElementById(id);
+    if (!el) return { el: null, width: 0, height: 0 };
+    const r = el.getBoundingClientRect();
+    return { el, width: Math.max(200, r.width), height: Math.max(160, r.height) };
+  }
+
+  function empty(el, msg) {
+    el.innerHTML = `<div class="chart-empty">${msg}</div>`;
+  }
+
+  function tip(event, html) {
+    if (!global.MumbaiDash) return;
+    MumbaiDash.tip(html, event.clientX, event.clientY);
+  }
+
+  function styleAxis(axis) {
+    axis.selectAll("line").attr("stroke", "#eee8df");
+    axis.select(".domain").attr("stroke", "#cfc3b3");
+    axis.selectAll("text").attr("fill", "#7a7168").attr("font-size", 10);
+  }
+
+  MXViz.drawMap = function (wards, sel) {
+    const { el, width, height } = sizeOf("ward-map");
+    if (!el) return;
     el.innerHTML = "";
-    const pad = 12;
-    const size = Math.min(width, height) - pad * 2;
-    const svg = d3.select(el)
-      .append("svg")
-      .attr("viewBox", `${-pad} ${-pad} ${width + pad * 2} ${height + pad * 2}`)
-      .attr("preserveAspectRatio", "xMidYMid meet")
-      .style("overflow", "visible");
-    const g = svg.append("g").attr("transform", `translate(${width / 2},${height / 2})`);
-    const data = MumbaiDash.data.wards;
-    const outer = Math.max(80, size / 2 - 10);
-    const inner = Math.max(46, outer * 0.3);
-    const x = d3.scaleBand().range([0, 2 * Math.PI]).align(0).domain(data.map((d) => d.ward));
-    const y = d3.scaleRadial().range([inner, outer]).domain([0, 1]);
+    if (!wards.length) { empty(el, "No ward centroids"); return; }
 
-    [0.25, 0.5, 0.75, 1].forEach((v) => {
-      g.append("circle").attr("r", y(v)).attr("fill", "none")
-        .attr("stroke", "rgba(143,91,74,0.12)")
-        .attr("stroke-dasharray", v === 1 ? "0" : "2 4");
-      g.append("text").attr("class", "ring-label").attr("y", -y(v) + 3)
-        .attr("text-anchor", "middle").attr("font-size", 9).text(v.toFixed(2));
-    });
-    g.append("circle").attr("r", inner - 6)
-      .attr("fill", "rgba(143, 91, 74, 0.06)")
-      .attr("stroke", "rgba(143, 91, 74, 0.22)");
+    const margin = { top: 14, right: 18, bottom: 32, left: 44 };
+    const innerW = width - margin.left - margin.right;
+    const innerH = height - margin.top - margin.bottom;
+    const lon = d3.extent(wards, d => d.lon);
+    const lat = d3.extent(wards, d => d.lat);
+    const x = d3.scaleLinear().domain([lon[0] - 0.04, lon[1] + 0.01]).range([0, innerW]);
+    const y = d3.scaleLinear().domain([lat[0] - 0.01, lat[1] + 0.01]).range([innerH, 0]);
+    const maxRain = d3.max(wards, d => d.live.rainToday) || 0;
+    const r = d3.scaleSqrt().domain([0, Math.max(1, maxRain)]).range([8, 26]);
+    const selectedId = sel && sel.id;
+    const color = MumbaiDash.aqiColor;
 
-    const arc = d3.arc()
-      .innerRadius(inner)
-      .outerRadius((d) => y(d.svi))
-      .startAngle((d) => x(d.ward))
-      .endAngle((d) => x(d.ward) + x.bandwidth())
-      .padAngle(0.01)
-      .padRadius(inner);
+    const svg = d3.select(el).append("svg")
+      .attr("viewBox", `0 0 ${width} ${height}`)
+      .attr("preserveAspectRatio", "xMidYMid meet");
+    svg.append("rect").attr("width", width).attr("height", height).attr("fill", "#f3ebe0");
 
-    circularPaths = g.append("g").selectAll("path").data(data).join("path")
-      .attr("class", "circular")
-      .attr("d", arc)
-      .on("mouseover", function (event, d) {
-        d3.select(this).attr("fill-opacity", 0.55);
-        MumbaiDash.tooltip.show(event, `<strong>${d.ward}</strong><br>Index ${d.svi.toFixed(4)}<br>${U().bandLabel(d.band)}`);
-      })
-      .on("mousemove", (event, d) => {
-        MumbaiDash.tooltip.show(event, `<strong>${d.ward}</strong><br>Index ${d.svi.toFixed(4)}<br>${U().bandLabel(d.band)}`);
-      })
-      .on("mouseout", function () {
-        d3.select(this).attr("fill-opacity", 1);
-        MumbaiDash.tooltip.hide();
-      })
-      .on("click", (event, d) => {
-        event.stopPropagation();
-        MumbaiDash.selectWard(d.ward);
-      });
-
-    const center = g.append("g").attr("class", "hub");
-    center.append("text").attr("class", "hub-name").attr("text-anchor", "middle").attr("y", -8)
-      .attr("fill", "#2c2824").attr("font-family", "Fraunces, serif").attr("font-size", 12);
-    center.append("text").attr("class", "hub-svi").attr("text-anchor", "middle").attr("y", 10)
-      .attr("fill", "#8f5b4a").attr("font-family", "Source Sans 3, sans-serif").attr("font-size", 13);
-    center.append("text").attr("class", "hub-band").attr("text-anchor", "middle").attr("y", 26)
-      .attr("fill", "#7a7168").attr("font-family", "Source Sans 3, sans-serif").attr("font-size", 10);
-    Viz.updateCircular();
-  };
-
-  Viz.updateCircular = function () {
-    if (!circularPaths) return Viz.drawCircular();
-    const selected = MumbaiDash.state.ward;
-    const filter = MumbaiDash.state.band;
-    circularPaths
-      .attr("fill", (d) => U().bandColor(d.svi))
-      .attr("stroke", (d) => (d.ward === selected ? "#2c2824" : "transparent"))
-      .attr("stroke-width", (d) => (d.ward === selected ? 1.6 : 0))
-      .attr("opacity", (d) => {
-        if (filter === "all" || filter === "focus") return 1;
-        return d.band === filter ? 1 : 0.12;
-      });
-    const row = MumbaiDash.selectedRow();
-    const root = d3.select("#circular-chart");
-    root.select(".hub-name").text(row ? clipLabel(row.ward) : "Select a ward");
-    root.select(".hub-svi").text(row ? row.svi.toFixed(3) : "—");
-    root.select(".hub-band").text(row ? U().bandLabel(row.band) : "");
-  };
-
-  Viz.drawRadar = function () {
-    const { el, width, height } = U().mountSize("radar-chart");
-    el.innerHTML = "";
-    const row = MumbaiDash.selectedRow();
-    if (!row) {
-      el.innerHTML = `<div class="chart-empty">Select a ward on the index chart</div>`;
-      return;
-    }
-    const data = [[
-      { axis: "Index", value: row.svi, theme: "Mumbai Exposure Index" },
-      { axis: "Flood", value: row.theme1, theme: "Flood / drainage" },
-      { axis: "Heat", value: row.theme2, theme: "Heat / housing" },
-      { axis: "Air", value: row.theme3, theme: "Air / health" },
-      { axis: "Services", value: row.theme4, theme: "Services / density" }
-    ]];
-    const margin = 52;
-    const w = Math.max(120, width - margin * 2);
-    const h = Math.max(120, height - margin * 2);
-    const radius = Math.min(w, h) / 2 * 0.78;
-    const levels = 4;
-    const angleSlice = (Math.PI * 2) / data[0].length;
-    const rScale = d3.scaleLinear().range([0, radius]).domain([0, 1]);
-    const selectedTheme = MumbaiDash.state.theme;
-    const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${width} ${height}`)
-      .attr("preserveAspectRatio", "xMidYMid meet").style("overflow", "visible");
-    const g = svg.append("g").attr("transform", `translate(${width / 2},${height / 2})`);
-
-    d3.range(1, levels + 1).reverse().forEach((lvl) => {
-      g.append("circle").attr("r", radius / levels * lvl)
-        .attr("fill", "rgba(143,91,74,0.04)").attr("stroke", "rgba(143,91,74,0.16)");
-      g.append("text").attr("class", "ring-label").attr("x", 4)
-        .attr("y", -(radius / levels * lvl) + 3).attr("font-size", 9)
-        .text((lvl / levels).toFixed(2));
-    });
-
-    const axis = g.selectAll(".axis").data(data[0]).join("g").attr("class", "axis")
-      .style("cursor", "pointer")
-      .on("click", (event, d) => MumbaiDash.selectTheme(d.theme))
-      .on("mouseover", (event, d) => MumbaiDash.tooltip.show(event, `${d.axis}<br>${d.value.toFixed(4)}`))
-      .on("mousemove", (event, d) => MumbaiDash.tooltip.show(event, `${d.axis}<br>${d.value.toFixed(4)}`))
-      .on("mouseout", () => MumbaiDash.tooltip.hide());
-
-    axis.append("line").attr("x1", 0).attr("y1", 0)
-      .attr("x2", (d, i) => rScale(1.05) * Math.cos(angleSlice * i - Math.PI / 2))
-      .attr("y2", (d, i) => rScale(1.05) * Math.sin(angleSlice * i - Math.PI / 2))
-      .attr("stroke", (d) => (selectedTheme === d.theme ? "#8f5b4a" : "rgba(44,40,36,0.18)"))
-      .attr("stroke-width", (d) => (selectedTheme === d.theme ? 2 : 1));
-    axis.append("text").attr("class", "legend-text").attr("text-anchor", "middle").attr("dy", "0.35em")
-      .attr("x", (d, i) => rScale(1.28) * Math.cos(angleSlice * i - Math.PI / 2))
-      .attr("y", (d, i) => rScale(1.28) * Math.sin(angleSlice * i - Math.PI / 2))
-      .attr("fill", (d) => (selectedTheme === d.theme ? "#8f5b4a" : "#7a7168"))
-      .attr("font-size", 11)
-      .text((d) => d.axis);
-
-    const radarLine = d3.lineRadial().radius((d) => rScale(d.value)).angle((d, i) => i * angleSlice).curve(d3.curveCardinalClosed);
-    const color = U().bandColor(row.svi);
-    const wrap = g.append("g");
-    wrap.append("path").datum(data[0]).attr("d", radarLine)
-      .attr("fill", color).attr("fill-opacity", 0.28).attr("stroke", color).attr("stroke-width", 2);
-    wrap.selectAll("circle.dot").data(data[0]).join("circle").attr("class", "dot")
-      .attr("r", (d) => (d.axis === "Index" || selectedTheme === d.theme ? 6 : 4))
-      .attr("cx", (d, i) => rScale(d.value) * Math.cos(angleSlice * i - Math.PI / 2))
-      .attr("cy", (d, i) => rScale(d.value) * Math.sin(angleSlice * i - Math.PI / 2))
-      .attr("fill", (d) => (d.axis === "Index" ? "#8f5b4a" : color))
-      .attr("stroke", "#fffdf8").style("cursor", "pointer")
-      .on("click", (event, d) => MumbaiDash.selectTheme(d.theme))
-      .on("mouseover", (event, d) => MumbaiDash.tooltip.show(event, `${d.axis}: ${d.value.toFixed(4)}`))
-      .on("mouseout", () => MumbaiDash.tooltip.hide());
-  };
-
-  Viz.drawRain = function () {
-    const { el, width, height } = U().mountSize("stacked-chart");
-    el.innerHTML = "";
-    const data = MumbaiDash.data.daily;
-    const keys = MumbaiDash.data.dailyKeys;
-    if (!data.length) {
-      el.innerHTML = `<div class="chart-empty">Rain feed unavailable</div>`;
-      return;
-    }
-    const margin = { top: 18, right: 16, bottom: 32, left: 44 };
-    const innerW = Math.max(80, width - margin.left - margin.right);
-    const innerH = Math.max(80, height - margin.top - margin.bottom);
-    const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${width} ${height}`)
-      .attr("preserveAspectRatio", "xMidYMid meet").style("overflow", "visible");
     const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
-    const stacked = d3.stack().keys(keys)(data);
-    const yMax = d3.max(stacked[stacked.length - 1], (d) => d[1]) || 1;
-    const x = d3.scaleTime().domain(d3.extent(data, (d) => d.date)).range([0, innerW]);
-    const y = d3.scaleLinear().domain([0, yMax * 1.08]).range([innerH, 0]);
-    const axisInk = "#7a7168";
-    const axisLine = "#eee8df";
-    const axisDomain = "#cfc3b3";
+
+    const seaW = Math.max(36, x(lon[0]) + 8);
+    g.append("rect")
+      .attr("x", -margin.left)
+      .attr("y", -margin.top)
+      .attr("width", seaW + margin.left)
+      .attr("height", height)
+      .attr("fill", "#d5e2ea")
+      .attr("opacity", 0.7);
+    g.append("text")
+      .attr("x", -margin.left + 12)
+      .attr("y", innerH / 2)
+      .attr("fill", "#6a7c86")
+      .attr("font-size", 10)
+      .attr("letter-spacing", "0.08em")
+      .attr("transform", `rotate(-90,${-margin.left + 12},${innerH / 2})`)
+      .text("Arabian Sea");
 
     g.append("g").attr("transform", `translate(0,${innerH})`)
-      .call(d3.axisBottom(x).ticks(6).tickSize(-innerH))
-      .call((axis) => axis.selectAll("line").attr("stroke", axisLine))
-      .call((axis) => axis.select(".domain").attr("stroke", axisDomain))
-      .call((axis) => axis.selectAll("text").attr("fill", axisInk).attr("font-size", 11));
-    g.append("g").call(d3.axisLeft(y).ticks(4).tickSize(-innerW).tickFormat((d) => `${d}`))
-      .call((axis) => axis.selectAll("line").attr("stroke", axisLine))
-      .call((axis) => axis.select(".domain").attr("stroke", axisDomain))
-      .call((axis) => axis.selectAll("text").attr("fill", axisInk).attr("font-size", 11));
-    g.append("text").attr("x", innerW).attr("y", innerH + 28).attr("text-anchor", "end")
-      .attr("fill", axisInk).attr("font-size", 11).text("Date · mm");
+      .call(d3.axisBottom(x).ticks(4).tickFormat(d => d.toFixed(2)))
+      .call(styleAxis);
+    g.append("g")
+      .call(d3.axisLeft(y).ticks(4).tickFormat(d => d.toFixed(2)))
+      .call(styleAxis);
 
-    const areaGen = d3.area().x((d) => x(d.data.date)).y0((d) => y(d[0])).y1((d) => y(d[1]));
-    rainLayers = g.selectAll("path.case-layer").data(stacked).join("path")
-      .attr("class", (d) => "case-layer " + d.key)
-      .attr("d", areaGen)
+    const nodes = g.selectAll("g.ward").data(wards).join("g").attr("class", "ward")
+      .attr("transform", d => `translate(${x(d.lon)},${y(d.lat)})`)
       .style("cursor", "pointer")
-      .on("click", (event, d) => MumbaiDash.selectRainKey(d.key))
-      .on("mousemove", (event) => {
-        const xm = x.invert(d3.pointer(event, g.node())[0]);
-        const i = d3.bisector((row) => row.date).center(data, xm);
-        const row = data[i];
-        if (!row) return;
-        const lines = keys.map((k) => `${k}: ${row[k].toFixed(1)} mm`).join("<br>");
-        MumbaiDash.tooltip.show(event, `<strong>${d3.timeFormat("%d %b %Y")(row.date)}</strong><br>${lines}`);
+      .on("click", (event, d) => MumbaiDash.selectWard(d.id))
+      .on("mousemove", (event, d) => {
+        tip(event, `<strong>${d.ward}</strong><br>AQI ${fmt(d.live.now.aqi, 0)} · ${MumbaiDash.aqiLabel(d.live.now.aqi)}<br>Rain today ${fmt(d.live.rainToday, 1)} mm`);
       })
-      .on("mouseleave", () => MumbaiDash.tooltip.hide());
+      .on("mouseleave", () => MumbaiDash.tip(null));
 
-    const legend = svg.append("g").attr("transform", `translate(${margin.left + 8},8)`);
-    keys.forEach((key, i) => {
-      const item = legend.append("g").attr("transform", `translate(${i * 88},0)`).style("cursor", "pointer")
-        .on("click", () => MumbaiDash.selectRainKey(key));
-      item.append("rect").attr("width", 8).attr("height", 8).attr("fill", rainPalette[key]);
-      item.append("text").attr("x", 12).attr("y", 8).attr("fill", "#3a3530").attr("font-size", 11).text(key);
-    });
-    Viz.updateRain();
-  };
+    nodes.append("circle")
+      .attr("r", d => r(d.live.rainToday || 0))
+      .attr("fill", d => color(d.live.now.aqi))
+      .attr("fill-opacity", 0.88)
+      .attr("stroke", d => d.id === selectedId ? "#2c2824" : "rgba(255,253,248,0.75)")
+      .attr("stroke-width", d => d.id === selectedId ? 2.4 : 1);
 
-  Viz.updateRain = function () {
-    if (!rainLayers) return;
-    const key = MumbaiDash.state.rainKey;
-    rainLayers
-      .attr("fill", (d) => rainPalette[d.key] || "#c48962")
-      .attr("fill-opacity", (d) => (!key ? 0.85 : d.key === key ? 0.95 : 0.18));
-  };
+    const worst = wards.slice().sort((a, b) => (b.live.now.aqi || 0) - (a.live.now.aqi || 0))[0];
+    nodes.filter(d => d.id === selectedId || (worst && d.id === worst.id))
+      .append("text")
+      .attr("y", d => r(d.live.rainToday || 0) + 12)
+      .attr("text-anchor", "middle")
+      .attr("font-size", 10)
+      .attr("fill", "#3a3530")
+      .text(d => d.short);
 
-  const themeColor = {
-    "Mumbai Exposure Index": "#7d9a86",
-    "Flood / drainage": "#8f5b4a",
-    "Heat / housing": "#c48962",
-    "Air / health": "#8d7e92",
-    "Services / density": "#a86b56"
-  };
-
-  function themeScore(row, name) {
-    if (!row) return 1;
-    if (name === "Mumbai Exposure Index") return Math.max(0.08, row.svi);
-    if (name === "Flood / drainage") return Math.max(0.08, row.theme1);
-    if (name === "Heat / housing") return Math.max(0.08, row.theme2);
-    if (name === "Air / health") return Math.max(0.08, row.theme3);
-    if (name === "Services / density") return Math.max(0.08, row.theme4);
-    return 1;
-  }
-
-  function parentTheme(d) {
-    let node = d;
-    while (node) {
-      if (themeColor[node.data.name] && node.data.name !== "Mumbai Exposure Index") return node.data.name;
-      node = node.parent;
+    const legend = document.getElementById("map-legend");
+    if (legend) {
+      const stops = [0, 50, 100, 150, 200];
+      legend.innerHTML = stops.map((v, i) => {
+        if (i === stops.length - 1) return "";
+        return `<span><i style="background:${color(v + 1)}"></i>${v}–${stops[i + 1]}</span>`;
+      }).join("") + `<span>Size = rain today (max ${fmt(maxRain, 1)} mm)</span>`;
     }
-    return d.data.name;
-  }
+  };
 
-  function colorOf(d) {
-    if (themeColor[d.data.name]) return themeColor[d.data.name];
-    return themeColor[parentTheme(d)] || "#7a7168";
-  }
-
-  function rawScore(row, d) {
-    if (!row) return null;
-    if (d.depth === 0) return row.svi;
-    if (d.depth === 1) return themeScore(row, d.data.name);
-    return themeScore(row, parentTheme(d));
-  }
-
-  Viz.drawTaxonomy = function () {
-    const { el, width, height } = U().mountSize("taxonomy-chart");
+  MXViz.drawHeat = function (wards, sel) {
+    const { el, width, height } = sizeOf("aqi-heat");
+    if (!el) return;
     el.innerHTML = "";
-    const data = MumbaiDash.data.taxonomy;
-    if (!data) return;
-    const row = MumbaiDash.selectedRow();
-    const radius = Math.min(width, height) / 2 - 18;
-    const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${width} ${height}`)
-      .attr("preserveAspectRatio", "xMidYMid meet").style("overflow", "visible");
-    const g = svg.append("g").attr("transform", `translate(${width / 2},${height / 2})`);
-    const root = d3.hierarchy(data);
-    root.eachAfter((node) => {
-      if (!node.children) {
-        const themeName = node.parent && node.parent.depth === 1 ? node.parent.data.name : node.data.name;
-        const siblings = node.parent ? node.parent.children.length : 1;
-        node.value = themeScore(row, themeName) / siblings;
+    const ranked = wards.slice().sort((a, b) => (b.live.now.aqi || -1) - (a.live.now.aqi || -1));
+    const hours = (ranked.find(w => w.live.hours24.length) || {}).live?.hours24 || [];
+    if (!hours.length) { empty(el, "AQI hours not in yet — feed down or still loading"); return; }
+
+    const margin = { top: 10, right: 12, bottom: 22, left: 78 };
+    const innerW = width - margin.left - margin.right;
+    const innerH = height - margin.top - margin.bottom;
+    const keys = hours.map(h => h.t);
+    const x = d3.scaleBand().domain(keys).range([0, innerW]).padding(0.08);
+    const y = d3.scaleBand().domain(ranked.map(w => w.id)).range([0, innerH]).padding(0.1);
+    const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${width} ${height}`);
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+    const selectedId = sel && sel.id;
+    const byId = new Map(ranked.map(w => [w.id, w]));
+
+    const cells = [];
+    ranked.forEach(w => {
+      const map = new Map(w.live.hours24.map(h => [h.t, h]));
+      keys.forEach(t => {
+        const h = map.get(t);
+        cells.push({ id: w.id, t, aqi: h ? h.aqi : NaN, date: h && h.date });
+      });
+    });
+
+    g.selectAll("rect").data(cells).join("rect")
+      .attr("x", d => x(d.t))
+      .attr("y", d => y(d.id))
+      .attr("width", x.bandwidth())
+      .attr("height", y.bandwidth())
+      .attr("rx", 1)
+      .attr("fill", d => MumbaiDash.aqiColor(d.aqi))
+      .attr("stroke", d => d.id === selectedId ? "#2c2824" : "none")
+      .attr("stroke-width", 1)
+      .style("cursor", "pointer")
+      .on("click", (event, d) => MumbaiDash.selectWard(d.id))
+      .on("mousemove", (event, d) => {
+        const w = byId.get(d.id);
+        const when = d.date ? d3.timeFormat("%d %b %H:%M")(d.date) : d.t;
+        tip(event, `<strong>${w ? w.short : d.id}</strong><br>${when}<br>AQI ${fmt(d.aqi, 0)}`);
+      })
+      .on("mouseleave", () => MumbaiDash.tip(null));
+
+    g.append("g").call(d3.axisLeft(y).tickFormat(id => {
+      const w = byId.get(id);
+      return w ? w.short : id;
+    }).tickSize(0))
+      .call(axis => axis.select(".domain").remove())
+      .call(axis => axis.selectAll("text").attr("fill", "#7a7168").attr("font-size", 10));
+
+    const tickKeys = keys.filter((_, i) => i % 4 === 0);
+    g.append("g").attr("transform", `translate(0,${innerH})`)
+      .call(d3.axisBottom(x).tickValues(tickKeys).tickFormat(t => {
+        const h = hours.find(x => x.t === t);
+        return h && h.date ? d3.timeFormat("%H")(h.date) : t.slice(11, 13);
+      }).tickSize(0))
+      .call(axis => axis.select(".domain").remove())
+      .call(axis => axis.selectAll("text").attr("fill", "#7a7168").attr("font-size", 10));
+  };
+
+  MXViz.drawRidge = function (wards, sel) {
+    const { el, width, height } = sizeOf("rain-ridge");
+    if (!el) return;
+    el.innerHTML = "";
+    const wet = wards.slice()
+      .map(w => ({ w, mm: d3.sum(w.live.rain14, d => d.rain) }))
+      .sort((a, b) => b.mm - a.mm)
+      .slice(0, 8)
+      .map(d => d.w);
+    const days = (wet[0] && wet[0].live.rain14) || [];
+    if (!wet.length || !days.length) {
+      empty(el, "Daily rain not in yet — feed down or still loading");
+      return;
+    }
+
+    const margin = { top: 8, right: 14, bottom: 22, left: 78 };
+    const innerW = width - margin.left - margin.right;
+    const innerH = height - margin.top - margin.bottom;
+    const parsed = days.map(d => ({ t: parseDay(d.day), rain: d.rain }));
+    const x = d3.scaleTime().domain(d3.extent(parsed, d => d.t)).range([0, innerW]);
+    const y = d3.scaleBand().domain(wet.map(w => w.id)).range([0, innerH]).paddingInner(0.18);
+    const peak = d3.max(wet, w => d3.max(w.live.rain14, d => d.rain)) || 1;
+    const yh = d3.scaleLinear().domain([0, peak]).range([0, y.bandwidth()]);
+    const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${width} ${height}`);
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+    const selectedId = sel && sel.id;
+    const area = d3.area()
+      .x(d => x(d.t))
+      .y0(y.bandwidth())
+      .y1(d => y.bandwidth() - yh(d.rain))
+      .curve(d3.curveBasis);
+
+    wet.forEach(w => {
+      const series = w.live.rain14.map(d => ({ t: parseDay(d.day), rain: d.rain }));
+      const gg = g.append("g").attr("transform", `translate(0,${y(w.id)})`)
+        .style("cursor", "pointer")
+        .on("click", () => MumbaiDash.selectWard(w.id))
+        .on("mousemove", (event) => {
+          tip(event, `<strong>${w.ward}</strong><br>14-day rain ${fmt(d3.sum(w.live.rain14, d => d.rain), 0)} mm`);
+        })
+        .on("mouseleave", () => MumbaiDash.tip(null));
+      gg.append("path").datum(series).attr("d", area)
+        .attr("fill", w.id === selectedId ? "#8f5b4a" : "#c48962")
+        .attr("fill-opacity", w.id === selectedId ? 0.55 : 0.28)
+        .attr("stroke", "#8f5b4a")
+        .attr("stroke-opacity", 0.75);
+    });
+
+    const byId = new Map(wet.map(w => [w.id, w]));
+    g.append("g").call(d3.axisLeft(y).tickFormat(id => (byId.get(id) || {}).short || id).tickSize(0))
+      .call(axis => axis.select(".domain").remove())
+      .call(axis => axis.selectAll("text").attr("fill", "#7a7168").attr("font-size", 10));
+    g.append("g").attr("transform", `translate(0,${innerH})`)
+      .call(d3.axisBottom(x).ticks(5).tickSize(0).tickFormat(d3.timeFormat("%d %b")))
+      .call(axis => axis.select(".domain").remove())
+      .call(axis => axis.selectAll("text").attr("fill", "#7a7168").attr("font-size", 10));
+  };
+
+  MXViz.drawTraces = function (wards, sel) {
+    const { el, width, height } = sizeOf("ward-traces");
+    if (!el) return;
+    el.innerHTML = "";
+    const title = document.getElementById("trace-title");
+    if (title) title.textContent = sel ? sel.short + ", last 48 hours" : "This ward, last 48 hours";
+    const hours = (sel && sel.live.hours48) || [];
+    if (!hours.length) { empty(el, "Pick a ward after the live feed lands"); return; }
+
+    const series = [
+      { key: "PM2.5", unit: "µg/m³", get: d => d.pm25, color: "#8f5b4a", bars: false },
+      { key: "NO₂", unit: "µg/m³", get: d => d.no2, color: "#8d7e92", bars: false },
+      { key: "Ozone", unit: "µg/m³", get: d => d.o3, color: "#7d9a86", bars: false },
+      { key: "Rain", unit: "mm", get: d => d.rain, color: "#5a7a92", bars: true }
+    ];
+    const margin = { top: 4, right: 10, bottom: 18, left: 36 };
+    const gap = 6;
+    const slot = (height - margin.bottom - gap * 3) / 4;
+    const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${width} ${height}`);
+    const x = d3.scaleTime().domain(d3.extent(hours, d => d.date)).range([margin.left, width - margin.right]);
+
+    series.forEach((s, i) => {
+      const y0 = i * (slot + gap);
+      const ymax = d3.max(hours, s.get);
+      const y = d3.scaleLinear().domain([0, Number.isFinite(ymax) && ymax > 0 ? ymax : 1]).nice()
+        .range([y0 + slot - 8, y0 + 16]);
+      const g = svg.append("g");
+      g.append("text").attr("x", margin.left).attr("y", y0 + 11)
+        .attr("fill", s.color).attr("font-size", 11)
+        .text(`${s.key} (${s.unit})`);
+      if (s.bars) {
+        const bw = Math.max(1.5, (width - margin.left - margin.right) / Math.max(hours.length, 1) - 0.4);
+        g.selectAll("rect").data(hours).join("rect")
+          .attr("x", d => x(d.date) - bw / 2)
+          .attr("y", d => y(s.get(d) || 0))
+          .attr("width", bw)
+          .attr("height", d => Math.max(0, y(0) - y(s.get(d) || 0)))
+          .attr("fill", s.color)
+          .attr("opacity", 0.8);
       } else {
-        node.value = d3.sum(node.children, (c) => c.value);
+        const line = d3.line()
+          .defined(d => Number.isFinite(s.get(d)))
+          .x(d => x(d.date))
+          .y(d => y(s.get(d)))
+          .curve(d3.curveMonotoneX);
+        g.append("path").datum(hours).attr("d", line).attr("fill", "none")
+          .attr("stroke", s.color).attr("stroke-width", 1.7);
       }
     });
-    d3.partition().size([2 * Math.PI, radius])(root);
-    const arc = d3.arc().startAngle((d) => d.x0).endAngle((d) => d.x1)
-      .padAngle(0.012).padRadius(radius / 3)
-      .innerRadius((d) => d.y0).outerRadius((d) => Math.max(d.y0, d.y1 - 2));
-    const selected = MumbaiDash.state.theme;
 
-    g.selectAll("path").data(root.descendants()).join("path").attr("d", arc)
-      .attr("fill", (d) => colorOf(d))
-      .attr("fill-opacity", (d) => {
-        if (!selected) return d.depth === 0 ? 0.95 : 0.82;
-        return d.data.name === selected || hasAncestor(d, selected) || hasDescendantName(d, selected) ? 1 : 0.18;
-      })
-      .attr("stroke", (d) => (d.data.name === selected ? "#2c2824" : "rgba(44,40,36,0.12)"))
-      .attr("stroke-width", (d) => (d.data.name === selected ? 2 : 0.5))
-      .style("cursor", "pointer")
-      .on("click", (event, d) => MumbaiDash.selectTheme(d.data.name))
-      .on("mouseover", (event, d) => {
-        const score = rawScore(row, d);
-        MumbaiDash.tooltip.show(event, score == null ? d.data.name : `${d.data.name}<br>${row.ward}: ${(+score).toFixed(3)}`);
-      })
-      .on("mouseout", () => MumbaiDash.tooltip.hide());
-
-    g.selectAll("text.slice")
-      .data(root.descendants().filter((d) => d.depth === 1 && (d.x1 - d.x0) > 0.35))
-      .join("text").attr("class", "slice")
-      .attr("transform", (d) => {
-        const angle = ((d.x0 + d.x1) / 2) * 180 / Math.PI;
-        const r = (d.y0 + d.y1) / 2;
-        return `rotate(${angle - 90}) translate(${r},0) rotate(${angle > 180 ? 180 : 0})`;
-      })
-      .attr("dy", "0.35em").attr("text-anchor", "middle").attr("fill", "#5c4a3a")
-      .attr("font-size", 10).attr("pointer-events", "none")
-      .text((d) => shortTheme(d.data.name));
-
-    g.append("circle").attr("r", root.children ? Math.max(24, root.children[0].y0 - 4) : 28)
-      .attr("fill", "#fffdf8").attr("stroke", "#7d9a86").style("cursor", "pointer")
-      .on("click", () => MumbaiDash.selectTheme("Mumbai Exposure Index"));
-    g.append("text").attr("text-anchor", "middle").attr("y", row ? -4 : 4)
-      .attr("fill", "#7d9a86").attr("font-size", 11).attr("font-family", "Fraunces")
-      .attr("pointer-events", "none").text(row ? row.svi.toFixed(2) : "Index");
-    if (row) {
-      g.append("text").attr("text-anchor", "middle").attr("y", 12)
-        .attr("fill", "#7a7168").attr("font-size", 9).attr("pointer-events", "none").text("Index");
-    }
+    svg.append("g").attr("transform", `translate(0,${height - 4})`)
+      .call(d3.axisBottom(x).ticks(4).tickSize(0).tickFormat(d3.timeFormat("%d %b %H:%M")))
+      .call(axis => axis.select(".domain").remove())
+      .call(axis => axis.selectAll("text").attr("fill", "#7a7168").attr("font-size", 10));
   };
 
-  Viz.updateTaxonomy = function () { Viz.drawTaxonomy(); };
+  function parseDay(day) {
+    return new Date(String(day) + "T00:00:00+05:30");
+  }
 
-  function hasAncestor(d, name) {
-    let node = d;
-    while (node) {
-      if (node.data.name === name) return true;
-      node = node.parent;
-    }
-    return false;
+  function fmt(v, d) {
+    return Number.isFinite(+v) ? (+v).toFixed(d) : "—";
   }
-  function hasDescendantName(d, name) {
-    return d.descendants().some((n) => n.data.name === name);
-  }
-  function shortTheme(name) {
-    if (name.startsWith("Flood")) return "Flood";
-    if (name.startsWith("Heat")) return "Heat";
-    if (name.startsWith("Air")) return "Air";
-    if (name.startsWith("Services")) return "Services";
-    return name;
-  }
-  function clipLabel(name) {
-    return name.length > 18 ? name.slice(0, 16) + "…" : name;
-  }
-})();
+
+  global.MXViz = MXViz;
+})(window);
