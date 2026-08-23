@@ -1,169 +1,177 @@
-currentWidth = parseInt(d3.select('#stacked-chart ').style('width'), 10)
-currentheight = parseInt(d3.select('.stacked-chart ').style('height'), 10)
-var parseTime = d3.timeParse("%d-%m-%Y");
+(function () {
+  const Viz = window.MCViz = window.MCViz || {};
+  let layers;
+  let x;
+  let xAxisG;
+  let areaGen;
+  const fullDomain = [new Date("2020-03-17"), new Date("2022-05-05")];
+  const palette = {
+    Danville: "#00e8ff",
+    Galax: "#ff3d5a",
+    Henry: "#ffb020",
+    Petersburg: "#c084fc",
+    Sussex: "#3dffb0"
+  };
 
-function type(d, _, columns) {
-    d.date = parseTime(d.date);
-    for (var i = 1, n = columns.length, c; i < n; ++i) d[c = columns[i]] = +d[c];
-    return d;
-}
+  Viz.drawStacked = function () {
+    const { el, width, height } = MCUtils.mountSize("stacked-chart");
+    el.innerHTML = "";
+    const data = MissionControl.data.daily;
+    const keys = MissionControl.data.dailyKeys;
+    if (!data.length) return;
 
-var margin = {top: 50, right: -200, bottom: 0, left: 100},
-    width = currentWidth - margin.left - margin.right,
-    height = currentheight - margin.top - margin.bottom;
+    const margin = { top: 18, right: 16, bottom: 32, left: 44 };
+    const innerW = Math.max(80, width - margin.left - margin.right);
+    const innerH = Math.max(80, height - margin.top - margin.bottom);
 
+    const svg = d3.select(el)
+      .append("svg")
+      .attr("viewBox", `0 0 ${width} ${height}`)
+      .attr("preserveAspectRatio", "xMidYMid meet");
 
-var svg = d3.select('body').select(".stacked-chart").select(".row").select('#stacked-chart')
-    .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-    .append("g")
-    .attr("transform",
-        "translate(" + margin.left + "," + margin.top + ")");
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+    const stacked = d3.stack().keys(keys)(data);
+    const yMax = d3.max(stacked[stacked.length - 1], (d) => d[1]) || 1;
 
-// Read the data
-d3.csv("assets/data/SVI-Top5-DailyCovidCases.csv",type, function(data) {
+    x = d3.scaleTime().domain(fullDomain).range([0, innerW]);
+    const y = d3.scaleLinear().domain([0, yMax * 1.05]).range([innerH, 0]);
 
-    // List of groups = header of the csv files
-    var keys = data.columns.slice(1)
+    xAxisG = g.append("g")
+      .attr("transform", `translate(0,${innerH})`)
+      .call(d3.axisBottom(x).ticks(6).tickSize(-innerH))
+      .call((axis) => axis.selectAll("line").attr("stroke", "rgba(0,232,255,0.08)"))
+      .call((axis) => axis.select(".domain").attr("stroke", "rgba(0,232,255,0.25)"))
+      .call((axis) => axis.selectAll("text").attr("fill", "#7a93a8").attr("font-family", "IBM Plex Mono").attr("font-size", 10));
 
-    var color = d3.scaleOrdinal()
-        .domain(keys)
-        .range(["#fbd8c6","#f5b295","#e88b6f","#d45d4e","#67001f"]);
+    g.append("g")
+      .call(d3.axisLeft(y).ticks(4).tickSize(-innerW))
+      .call((axis) => axis.selectAll("line").attr("stroke", "rgba(0,232,255,0.08)"))
+      .call((axis) => axis.select(".domain").attr("stroke", "rgba(0,232,255,0.25)"))
+      .call((axis) => axis.selectAll("text").attr("fill", "#7a93a8").attr("font-family", "IBM Plex Mono").attr("font-size", 10));
 
-    var stackedData = d3.stack()
-        .keys(keys)
-        (data)
+    g.append("text")
+      .attr("x", innerW)
+      .attr("y", innerH + 28)
+      .attr("text-anchor", "end")
+      .attr("fill", "#7a93a8")
+      .attr("font-size", 10)
+      .attr("font-family", "IBM Plex Mono")
+      .text("DATE");
 
-    // Add X axis
-    var x = d3.scaleTime()
-        .domain([new Date("2020-03-17"), new Date("2022-04-02")])
-        .range([ 0, width ]);
-    var xAxis = svg.append("g")
-        .attr("transform", "translate(0," + height + ")")
-        .call(d3.axisBottom(x).ticks(5))
+    const clipId = "case-clip";
+    g.append("defs").append("clipPath")
+      .attr("id", clipId)
+      .append("rect")
+      .attr("width", innerW)
+      .attr("height", innerH);
 
-    // Add X axis label:
-    svg.append("text")
-        .attr("text-anchor", "end")
-        .attr("x", width)
-        .attr("y", height+40 )
-        .text("Date");
+    areaGen = d3.area()
+      .x((d) => x(d.data.date))
+      .y0((d) => y(d[0]))
+      .y1((d) => y(d[1]));
 
-    // Add Y axis label:
-    svg.append("text")
-        .attr("text-anchor", "end")
-        .attr("x", 0)
-        .attr("y", -20 )
-        .attr("text-anchor", "start")
+    const areaChart = g.append("g").attr("clip-path", `url(#${clipId})`);
+    layers = areaChart.selectAll("path")
+      .data(stacked)
+      .join("path")
+      .attr("class", (d) => "case-layer " + d.key)
+      .attr("d", areaGen)
+      .style("pointer-events", "none");
 
-    // Add Y axis
-    var y = d3.scaleLinear()
-        .domain([0, 1800])
-        .range([ height, 0 ]);
-    svg.append("g")
-        .call(d3.axisLeft(y).ticks(5))
+    const bisect = d3.bisector((row) => row.date).center;
 
+    function rowAt(px) {
+      const xm = x.invert(px);
+      return data[bisect(data, xm)];
+    }
 
-    // ClipPath
-    var clip = svg.append("defs").append("svg:clipPath")
-        .attr("id", "clip")
-        .append("svg:rect")
-        .attr("width", width )
-        .attr("height", height )
-        .attr("x", 0)
-        .attr("y", 0);
+    function keyAt(px, py) {
+      const row = rowAt(px);
+      if (!row) return null;
+      const yVal = y.invert(py);
+      let cumulative = 0;
+      for (let i = 0; i < keys.length; i += 1) {
+        const next = cumulative + row[keys[i]];
+        if (yVal >= cumulative && yVal <= next) return keys[i];
+        cumulative = next;
+      }
+      return keys[keys.length - 1];
+    }
 
-    // Add brushing
-    var brush = d3.brushX()
-        .extent( [ [0,0], [width,height] ] )
-        .on("end", updateChart)
+    function redrawAxes() {
+      xAxisG.transition().duration(700).call(d3.axisBottom(x).ticks(6).tickSize(-innerH))
+        .call((axis) => axis.selectAll("line").attr("stroke", "rgba(0,232,255,0.08)"))
+        .call((axis) => axis.select(".domain").attr("stroke", "rgba(0,232,255,0.25)"))
+        .call((axis) => axis.selectAll("text").attr("fill", "#7a93a8"));
+      layers.transition().duration(700).attr("d", areaGen);
+    }
 
-    var areaChart = svg.append('g')
-        .attr("clip-path", "url(#clip)")
-
-    // Area generator
-    var area = d3.area()
-        .x(function(d) { return x(d.data.date); })
-        .y0(function(d) { return y(d[0]); })
-        .y1(function(d) { return y(d[1]); })
-
-    areaChart
-        .selectAll("mylayers")
-        .data(stackedData)
-        .enter()
-        .append("path")
-        .attr("class", function(d) { return "myArea " + d.key })
-        .style("fill", function(d) { return color(d.key); })
-        .attr("d", area)
-
-    // Add the brushing
-    areaChart
-        .append("g")
-        .attr("class", "brush")
-        .call(brush);
-
-    var idleTimeout
-    function idled() { idleTimeout = null; }
-
-    // Updates chart based on boundaries
-    function updateChart() {
-
-        extent = d3.event.selection
-
-        // If no selection, back to initial coordinate. Otherwise, update X axis domain
-        if(!extent){
-            if (!idleTimeout) return idleTimeout = setTimeout(idled, 350); // This allows to wait a little bit
-            x.domain(d3.extent(data, function(d) { return d.date; }))
-        }else{
-            x.domain([ x.invert(extent[0]), x.invert(extent[1]) ])
-            areaChart.select(".brush").call(brush.move, null) // This remove the grey brush area as soon as the selection has been done
+    const brush = d3.brushX()
+      .extent([[0, 0], [innerW, innerH]])
+      .on("end", (event) => {
+        if (!event.sourceEvent) return;
+        if (!event.selection) {
+          const [px, py] = d3.pointer(event.sourceEvent, g.node());
+          const key = keyAt(px, py);
+          if (key) MissionControl.selectCaseKey(key);
+          return;
         }
+        const [a, b] = event.selection.map(x.invert);
+        x.domain([a, b]);
+        areaChart.select(".brush").call(brush.move, null);
+        redrawAxes();
+      });
 
-        // Update axis and area position
-        xAxis.transition().duration(1000).call(d3.axisBottom(x).ticks(5))
-        areaChart
-            .selectAll("path")
-            .transition().duration(1000)
-            .attr("d", area)
-    }
-    var highlight = function(d){
-        console.log(d)
-        // reduce opacity of all groups
-        d3.selectAll(".myArea").style("opacity", .1)
-        // expect the one that is hovered
-        d3.select("."+d).style("opacity", 1)
-    }
+    const brushG = areaChart.append("g").attr("class", "brush").call(brush);
+    brushG.on("dblclick", () => {
+      x.domain(fullDomain);
+      redrawAxes();
+    });
+    brushG.on("mousemove", (event) => {
+      const [px, py] = d3.pointer(event, g.node());
+      const row = rowAt(px);
+      const key = keyAt(px, py);
+      if (!row || !key) return;
+      const lines = keys.map((k) => `${k}: ${row[k].toLocaleString()}`).join("<br>");
+      MissionControl.tooltip.show(
+        event,
+        `<strong>${d3.timeFormat("%d %b %Y")(row.date)}</strong><br>${lines}<br><em>${key} under cursor</em>`
+      );
+    });
+    brushG.on("mouseleave", () => MissionControl.tooltip.hide());
 
-    // And when it is not hovered anymore
-    var noHighlight = function(d){
-        d3.selectAll(".myArea").style("opacity", 1)
-    }
+    const legend = svg.append("g").attr("transform", `translate(${margin.left + 8},8)`);
+    keys.forEach((key, i) => {
+      const item = legend.append("g")
+        .attr("transform", `translate(${i * 92},0)`)
+        .style("cursor", "pointer")
+        .on("click", () => MissionControl.selectCaseKey(key))
+        .on("mouseover", () => layers.style("opacity", (d) => (d.key === key ? 1 : 0.15)))
+        .on("mouseout", () => Viz.updateStacked());
+      item.append("rect").attr("width", 8).attr("height", 8).attr("fill", palette[key]);
+      item.append("text")
+        .attr("x", 12)
+        .attr("y", 8)
+        .attr("fill", "#d6e7f5")
+        .attr("font-size", 10)
+        .attr("font-family", "IBM Plex Mono")
+        .text(key);
+    });
 
-    //Legend
-    var size = 20
-    svg.selectAll("myrect")
-        .data(keys)
-        .enter()
-        .append("rect")
-        .attr("x", 500)
-        .attr("y", function(d,i){ return 10 + i*(size+5)})
-        .attr("width", size)
-        .attr("height", size)
-        .style("fill", function(d){ return color(d)})
-        .on("mouseover", highlight)
-        .on("mouseleave", noHighlight)
+    Viz.updateStacked();
+  };
 
-    svg.selectAll("mylabels")
-        .data(keys)
-        .enter()
-        .append("text")
-        .attr("x", 500 + size*1.2)
-        .attr("y", function(d,i){ return 10 + i*(size+5) + (size/2)})
-        .style("fill", "black")
-        .text(function(d){ return d})
-        .attr("text-anchor", "left")
-        .style("alignment-baseline", "middle")
-        .on("mouseover", highlight)
-        .on("mouseleave", noHighlight)
-})
+  Viz.updateStacked = function () {
+    if (!layers) return;
+    const key = MissionControl.state.caseKey;
+    layers
+      .attr("fill", (d) => palette[d.key] || "#00e8ff")
+      .attr("fill-opacity", (d) => {
+        if (!key) return 0.85;
+        return d.key === key ? 0.95 : 0.18;
+      })
+      .attr("stroke", (d) => (d.key === key ? "#ffffff" : "none"))
+      .attr("stroke-width", (d) => (d.key === key ? 1 : 0))
+      .style("opacity", 1);
+  };
+})();
