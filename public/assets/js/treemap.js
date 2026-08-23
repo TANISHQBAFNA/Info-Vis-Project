@@ -45,6 +45,7 @@
 
   Viz.drawTaxonomy = function () {
     const { el, width, height } = MCUtils.mountSize("taxonomy-chart");
+    if (!el) return;
     el.innerHTML = "";
     const data = MissionControl.data.taxonomy;
     if (!data) return;

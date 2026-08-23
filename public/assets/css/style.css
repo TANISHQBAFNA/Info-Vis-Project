@@ -123,8 +123,8 @@ a {
 .bento {
   display: grid;
   flex: 1;
-  grid-template-columns: 1.25fr 0.75fr;
-  grid-template-rows: minmax(300px, 34vh) auto minmax(340px, 1fr);
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: minmax(300px, 34vh) auto auto;
   grid-template-areas:
     "cases cases"
     "combo combo"
@@ -137,6 +137,11 @@ a {
 #panel-svi-about { grid-area: combo; }
 #panel-radar { grid-area: themes; }
 #panel-taxonomy { grid-area: factors; }
+
+#panel-radar,
+#panel-taxonomy {
+  min-height: 0;
+}
 
 .hud {
   display: flex;
@@ -151,6 +156,10 @@ a {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.hud-brand {
+  min-width: 0;
 }
 
 .hud-kicker {
@@ -264,7 +273,8 @@ a {
   color: var(--muted);
 }
 
-#county-search {
+#county-search,
+#ward-search {
   flex: 1;
   background: transparent;
   border: 0;
@@ -292,6 +302,8 @@ a {
 
 .command-results button {
   appearance: none;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   text-align: left;
   background: transparent;
@@ -300,6 +312,15 @@ a {
   padding: 8px 10px;
   font-size: 13px;
   cursor: pointer;
+}
+
+.command-results button strong {
+  display: block;
+}
+
+.command-results button span {
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .command-results button:hover,
@@ -440,6 +461,15 @@ a {
   min-height: 280px;
   aspect-ratio: 1 / 1;
   max-height: min(560px, 70vh);
+}
+
+.chart-mount-theme {
+  flex: 0 0 auto;
+  width: 100%;
+  height: auto;
+  min-height: 420px;
+  aspect-ratio: 1 / 1;
+  max-height: min(680px, 78vh);
 }
 
 .chart-mount svg {
@@ -657,16 +687,6 @@ a {
 }
 
 @media (max-width: 1100px) {
-  .bento {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto;
-    grid-template-areas:
-      "cases"
-      "combo"
-      "themes"
-      "factors";
-  }
-
   .chart-mount-hero {
     min-height: 300px;
   }
@@ -676,6 +696,16 @@ a {
   .dashboard {
     width: 100%;
     padding: 10px 10px 24px;
+  }
+
+  .bento {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    grid-template-areas:
+      "cases"
+      "combo"
+      "themes"
+      "factors";
   }
 
   .hud,
@@ -707,7 +737,169 @@ a {
     max-height: min(52vh, 420px);
   }
 
-  .chart-mount-svi {
+  .chart-mount-svi,
+  .chart-mount-theme {
     max-height: min(420px, 70vh);
+    min-height: 280px;
+  }
+}
+
+/* Mumbai live dashboard — own layout, not the Virginia bento. */
+.mumbai-bento {
+  grid-template-columns: 1.35fr 0.95fr;
+  grid-template-rows: minmax(440px, 50vh) minmax(560px, auto) minmax(320px, 36vh);
+  grid-template-areas:
+    "map about"
+    "heat heat"
+    "ridge traces";
+}
+
+#panel-map { grid-area: map; }
+#panel-about { grid-area: about; }
+#panel-heat { grid-area: heat; }
+#panel-ridge { grid-area: ridge; }
+#panel-traces { grid-area: traces; }
+
+.mumbai-dash .kpis {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.chart-mount-map {
+  flex: 1;
+  min-height: 400px;
+}
+
+.chart-mount-heat {
+  flex: 0 0 auto;
+  min-height: 560px;
+  height: auto;
+  overflow: visible;
+}
+
+.chart-mount-ridge,
+.chart-mount-traces {
+  flex: 1;
+  min-height: 300px;
+}
+
+.chart-mount-heat svg {
+  height: auto;
+}
+
+body.mumbai-page .mc-tooltip {
+  min-width: 180px;
+  max-width: 280px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.mumbai-dash .live-dl dd {
+  font-size: 18px;
+}
+
+.mumbai-dash .map-legend {
+  font-size: 13px;
+  gap: 14px;
+  padding: 4px 18px 8px;
+}
+
+.mumbai-dash .map-legend i {
+  width: 12px;
+  height: 12px;
+}
+
+#panel-about .intel-feed {
+  overflow-y: auto;
+}
+
+.live-dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+  margin: 8px 0 14px;
+}
+
+.live-dl dt {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.live-dl dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.live-dl small {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.combo-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0 16px 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.map-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.map-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: block;
+}
+
+.live-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.aqi-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fffdf8;
+}
+
+@media (max-width: 900px) {
+  .mumbai-bento {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    grid-template-areas:
+      "map"
+      "about"
+      "heat"
+      "ridge"
+      "traces";
+  }
+
+  .chart-mount-map,
+  .chart-mount-ridge,
+  .chart-mount-traces {
+    min-height: 280px;
+  }
+
+  .chart-mount-heat {
+    min-height: 480px;
   }
 }

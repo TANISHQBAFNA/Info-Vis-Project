@@ -1,0 +1,45 @@
+{
+  "name": "Mumbai Exposure Index",
+  "colname": "level1",
+  "children": [
+    {
+      "name": "Flood / drainage",
+      "colname": "level2",
+      "children": [
+        { "name": "Waterlogging hotspots", "colname": "level3" },
+        { "name": "Coastal outfalls & high tide", "colname": "level3" },
+        { "name": "Stormwater / nallahs", "colname": "level3" },
+        { "name": "Low-lying reclamation", "colname": "level3" }
+      ]
+    },
+    {
+      "name": "Heat / housing",
+      "colname": "level2",
+      "children": [
+        { "name": "Land surface temperature", "colname": "level3" },
+        { "name": "Informal housing / slums", "colname": "level3" },
+        { "name": "Tree canopy", "colname": "level3" },
+        { "name": "Crowding", "colname": "level3" }
+      ]
+    },
+    {
+      "name": "Air / health",
+      "colname": "level2",
+      "children": [
+        { "name": "PM2.5 & NO2", "colname": "level3" },
+        { "name": "Industry & dumps", "colname": "level3" },
+        { "name": "Monsoon vector disease", "colname": "level3" }
+      ]
+    },
+    {
+      "name": "Services / density",
+      "colname": "level2",
+      "children": [
+        { "name": "Population density", "colname": "level3" },
+        { "name": "Sanitation access", "colname": "level3" },
+        { "name": "Open space", "colname": "level3" },
+        { "name": "Last-mile drainage", "colname": "level3" }
+      ]
+    }
+  ]
+}

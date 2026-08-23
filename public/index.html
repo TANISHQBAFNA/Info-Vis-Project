@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=svi-split-1">
+  <link rel="stylesheet" href="assets/css/style.css?v=svi-square-1">
 </head>
 <body>
   <div id="boot-screen">
@@ -26,6 +26,7 @@
       </div>
       <div class="hud-right">
         <p class="hud-chip"><span class="hud-chip-label">Period</span><span>Mar 2020 – May 2022</span></p>
+        <a class="hud-btn" href="mumbai.html">Mumbai</a>
         <a class="hud-btn" href="https://github.com/TANISHQBAFNA/Info-Vis-Project/tree/main/public/assets/data" target="_blank" rel="noopener">Data</a>
         <button class="hud-btn" id="btn-reset" type="button">Reset view</button>
       </div>
@@ -72,7 +73,7 @@
           <h2 id="radar-title">SVI themes for this county</h2>
           <span class="panel-hint">Click an axis to read about that theme</span>
         </header>
-        <div id="radar-chart" class="chart-mount"></div>
+          <div id="radar-chart" class="chart-mount chart-mount-theme"></div>
       </section>
 
       <section class="panel" id="panel-taxonomy">
@@ -80,7 +81,7 @@
           <h2 id="taxonomy-title">What SVI measures</h2>
           <span class="panel-hint">Slice size is this county’s score · click a ring</span>
         </header>
-        <div id="taxonomy-chart" class="chart-mount"></div>
+          <div id="taxonomy-chart" class="chart-mount chart-mount-theme"></div>
       </section>
     </div>
 
@@ -93,8 +94,8 @@
   <div id="mc-tooltip" class="mc-tooltip" role="tooltip" hidden></div>
 
   <script src="https://d3js.org/d3.v7.min.js"></script>
-  <script src="assets/js/dashboard.js?v=svi-split-1"></script>
-  <script src="assets/js/circular.js?v=svi-split-1"></script>
+  <script src="assets/js/dashboard.js?v=svi-split-2"></script>
+  <script src="assets/js/circular.js?v=svi-split-2"></script>
   <script src="assets/js/radarChart.js"></script>
   <script src="assets/js/stackedChart.js"></script>
   <script src="assets/js/treemap.js"></script>
