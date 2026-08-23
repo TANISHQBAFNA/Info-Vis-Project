@@ -3,6 +3,7 @@
 
   Viz.drawRadar = function () {
     const { el, width, height } = MCUtils.mountSize("radar-chart");
+    if (!el) return;
     el.innerHTML = "";
     const row = MissionControl.selectedRow();
     if (!row) {

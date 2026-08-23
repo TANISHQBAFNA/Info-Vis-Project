@@ -4,6 +4,7 @@
 
   Viz.drawCircular = function () {
     const { el, width, height } = MCUtils.mountSize("circular-chart");
+    if (!el) return;
     el.innerHTML = "";
     const pad = 12;
     const size = Math.min(width, height) - pad * 2;

@@ -18,6 +18,7 @@
 
   Viz.drawStacked = function () {
     const { el, width, height } = MCUtils.mountSize("stacked-chart");
+    if (!el) return;
     el.innerHTML = "";
     const data = MissionControl.data.daily;
     const keys = MissionControl.data.dailyKeys;

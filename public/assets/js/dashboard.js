@@ -162,6 +162,7 @@ const MissionControl = {
 
   renderSearch(query) {
     const results = document.getElementById("county-results");
+    if (!results) return;
     const q = (query || "").trim().toLowerCase();
     const matches = this.data.svi
       .filter((d) => !q || d.county.toLowerCase().includes(q))
@@ -183,7 +184,9 @@ const MissionControl = {
       { band: "low", label: "Low SVI", value: String(counts.low), sub: "Score ≤ 0.25", accent: "var(--low)" },
       { band: "focus", label: "Peak daily cases", value: peak.toLocaleString(), sub: "Five high-SVI counties combined", accent: "var(--accent)" }
     ];
-    document.getElementById("kpi-row").innerHTML = kpis.map((k) => `
+    const kpiRow = document.getElementById("kpi-row");
+    if (!kpiRow) return;
+    kpiRow.innerHTML = kpis.map((k) => `
       <button class="kpi${this.state.band === k.band ? " is-active" : ""}" data-band="${k.band}" style="--kpi-accent:${k.accent}">
         <span class="kpi-label">${k.label}</span>
         <span class="kpi-value">${k.value}</span>
@@ -199,12 +202,14 @@ const MissionControl = {
       { band: "mod-low", label: "Moderate–low", color: "var(--mod-low)" },
       { band: "low", label: "Low ≤ 0.25", color: "var(--low)" }
     ];
-    document.getElementById("array-legend").innerHTML = items.map((item) => `
+    const legend = document.getElementById("array-legend");
+    if (!legend) return;
+    legend.innerHTML = items.map((item) => `
       <button class="legend-swatch" data-band="${item.band}" type="button">
         <i style="background:${item.color}"></i>${item.label}
       </button>
     `).join("");
-    document.getElementById("array-legend").addEventListener("click", (e) => {
+    legend.addEventListener("click", (e) => {
       const btn = e.target.closest("[data-band]");
       if (btn) this.selectBand(btn.dataset.band);
     });
@@ -322,12 +327,13 @@ const MissionControl = {
     const title = document.getElementById("intel-title");
     const radarTitle = document.getElementById("radar-title");
     const taxonomyTitle = document.getElementById("taxonomy-title");
+    if (!feed) return;
     const county = this.state.county;
     if (title) title.textContent = county ? `About this ${county}` : "About this county";
     if (radarTitle) radarTitle.textContent = county ? `SVI themes for ${county}` : "SVI themes for this county";
     if (taxonomyTitle) taxonomyTitle.textContent = county ? `What SVI measures in ${county}` : "What SVI measures";
     const mode = this.state.intelMode;
-    stamp.textContent =
+    if (stamp) stamp.textContent =
       mode === "county" ? "County" :
       mode === "theme" ? "SVI factor" :
       mode === "band" ? "SVI band" :
@@ -467,6 +473,7 @@ const MissionControl = {
   tooltip: {
     show(event, html) {
       const el = document.getElementById("mc-tooltip");
+      if (!el) return;
       el.innerHTML = html;
       el.hidden = false;
       const x = event.clientX + 14;
@@ -627,6 +634,7 @@ function debounce(fn, ms) {
 
 function mountSize(id) {
   const el = document.getElementById(id);
+  if (!el) return { el: null, width: 160, height: 160 };
   const r = el.getBoundingClientRect();
   return { el, width: Math.max(160, r.width), height: Math.max(160, r.height) };
 }

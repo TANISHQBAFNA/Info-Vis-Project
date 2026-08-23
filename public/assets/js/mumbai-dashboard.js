@@ -76,7 +76,7 @@
         if (screen) screen.classList.add("is-done");
       }).catch(err => {
         console.error(err);
-        line("LOAD FAIL — " + (err && err.message ? err.message : err));
+        line("Could not load data — " + (err && err.message ? err.message : err));
       });
     },
 
@@ -153,7 +153,8 @@
     selectWard(id) {
       if (!id || !this.wards.some(w => w.id === id)) return;
       this.selectedId = id;
-      document.getElementById("ward-search").value = this.selected().ward;
+      const search = document.getElementById("ward-search");
+      if (search) search.value = this.selected().ward;
       this.drawAll();
     },
 
@@ -180,6 +181,7 @@
     renderSearch() {
       const input = document.getElementById("ward-search");
       const list = document.getElementById("ward-results");
+      if (!input || !list) return;
       const close = () => { list.hidden = true; list.innerHTML = ""; };
       const open = (q) => {
         const s = (q || "").trim().toLowerCase();
@@ -218,8 +220,8 @@
       const stamp = document.getElementById("about-stamp");
       const feed = document.getElementById("about-feed");
       if (!w || !feed) return;
-      title.textContent = w.ward;
-      stamp.textContent = this.liveOk
+      if (title) title.textContent = w.ward;
+      if (stamp) stamp.textContent = this.liveOk
         ? (this.fromCache ? "cached live · " : "live · ") + fmtWhen(this.liveAt)
         : (this.liveErr ? "feed error · static notes" : "awaiting feed");
       const now = w.live.now;
@@ -260,7 +262,8 @@
     },
 
     bind() {
-      document.getElementById("btn-reset").addEventListener("click", () => {
+      const reset = document.getElementById("btn-reset");
+      if (reset) reset.addEventListener("click", () => {
         this.selectWard(DEFAULT);
       });
       let t;
@@ -272,6 +275,7 @@
 
     tip(html, x, y) {
       const el = document.getElementById("mc-tooltip");
+      if (!el) return;
       if (!html) { el.hidden = true; return; }
       el.innerHTML = html;
       el.hidden = false;

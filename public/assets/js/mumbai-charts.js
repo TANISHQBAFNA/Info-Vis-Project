@@ -15,6 +15,7 @@
   }
 
   function empty(el, msg) {
+    if (!el) return;
     el.innerHTML = `<div class="chart-empty">${msg}</div>`;
   }
 
