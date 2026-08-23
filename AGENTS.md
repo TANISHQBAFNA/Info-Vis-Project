@@ -7,6 +7,9 @@ visualization website (D3.js), deployed via Firebase Hosting. All site files liv
 in `public/`. There is **no build step, no test suite, and no lint config** —
 development is: edit files in `public/`, then reload the browser.
 
+A second dashboard, `public/mumbai.html`, maps the same visual grammar onto
+24 BMC wards (flood, heat, air, services) with a live Open-Meteo rain/AQI layer.
+
 The Cloud Agent environment installs `firebase-tools` to a user-local npm prefix
 (`~/.npm-global`) and starts the Firebase Hosting emulator on port 5000.
 
