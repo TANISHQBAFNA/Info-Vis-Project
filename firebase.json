@@ -1,11 +1,17 @@
 {
   "hosting": {
-"site":"infoviz-cs5764",
+    "site": "infoviz-cs5764",
     "public": "public",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ]
+  },
+  "emulators": {
+    "hosting": {
+      "port": 5000,
+      "host": "127.0.0.1"
+    }
   }
 }
