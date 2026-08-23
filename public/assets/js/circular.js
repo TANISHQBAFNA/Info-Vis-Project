@@ -5,16 +5,18 @@
   Viz.drawCircular = function () {
     const { el, width, height } = MCUtils.mountSize("circular-chart");
     el.innerHTML = "";
-    const size = Math.min(width, height);
+    const pad = 12;
+    const size = Math.min(width, height) - pad * 2;
     const svg = d3.select(el)
       .append("svg")
-      .attr("viewBox", `0 0 ${width} ${height}`)
-      .attr("preserveAspectRatio", "xMidYMid meet");
+      .attr("viewBox", `${-pad} ${-pad} ${width + pad * 2} ${height + pad * 2}`)
+      .attr("preserveAspectRatio", "xMidYMid meet")
+      .style("overflow", "visible");
 
-    const g = svg.append("g").attr("transform", `translate(${width / 2},${height / 2 + 6})`);
+    const g = svg.append("g").attr("transform", `translate(${width / 2},${height / 2})`);
     const data = MissionControl.data.svi;
-    const inner = Math.max(48, size * 0.16);
-    const outer = Math.max(inner + 40, size * 0.42);
+    const outer = Math.max(80, size / 2 - 10);
+    const inner = Math.max(46, outer * 0.3);
 
     const x = d3.scaleBand()
       .range([0, 2 * Math.PI])

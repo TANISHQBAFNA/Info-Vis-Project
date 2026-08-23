@@ -30,7 +30,8 @@
     const svg = d3.select(el)
       .append("svg")
       .attr("viewBox", `0 0 ${width} ${height}`)
-      .attr("preserveAspectRatio", "xMidYMid meet");
+      .attr("preserveAspectRatio", "xMidYMid meet")
+      .style("overflow", "visible");
 
     const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
     const stacked = d3.stack().keys(keys)(data);

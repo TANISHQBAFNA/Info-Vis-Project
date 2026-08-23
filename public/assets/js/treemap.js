@@ -1,6 +1,5 @@
 (function () {
   const Viz = window.MCViz = window.MCViz || {};
-  let arcs;
 
   const themeColor = {
     "Social Vulnerability Index (SVI)": "#7d9a86",
@@ -10,14 +9,38 @@
     "Housing Type & Transportation": "#a86b56"
   };
 
-  function colorOf(d) {
-    if (themeColor[d.data.name]) return themeColor[d.data.name];
+  function themeScore(row, name) {
+    if (!row) return 1;
+    if (name === "Social Vulnerability Index (SVI)") return Math.max(0.08, row.svi);
+    if (name === "Socioeconomic") return Math.max(0.08, row.theme1);
+    if (name === "Household Composition & Disability") return Math.max(0.08, row.theme2);
+    if (name === "Minority Status & language") return Math.max(0.08, row.theme3);
+    if (name === "Housing Type & Transportation") return Math.max(0.08, row.theme4);
+    return 1;
+  }
+
+  function parentTheme(d) {
     let node = d;
-    while (node.parent) {
-      if (themeColor[node.data.name]) return themeColor[node.data.name];
+    while (node) {
+      if (themeColor[node.data.name] && node.data.name !== "Social Vulnerability Index (SVI)") {
+        return node.data.name;
+      }
       node = node.parent;
     }
-    return "#7a7168";
+    return d.data.name;
+  }
+
+  function colorOf(d) {
+    if (themeColor[d.data.name]) return themeColor[d.data.name];
+    const theme = parentTheme(d);
+    return themeColor[theme] || "#7a7168";
+  }
+
+  function rawScore(row, d) {
+    if (!row) return null;
+    if (d.depth === 0) return row.svi;
+    if (d.depth === 1) return themeScore(row, d.data.name);
+    return themeScore(row, parentTheme(d));
   }
 
   Viz.drawTaxonomy = function () {
@@ -25,44 +48,65 @@
     el.innerHTML = "";
     const data = MissionControl.data.taxonomy;
     if (!data) return;
+    const row = MissionControl.selectedRow();
 
-    const radius = Math.min(width, height) / 2 - 8;
+    const radius = Math.min(width, height) / 2 - 18;
     const svg = d3.select(el)
       .append("svg")
       .attr("viewBox", `0 0 ${width} ${height}`)
-      .attr("preserveAspectRatio", "xMidYMid meet");
+      .attr("preserveAspectRatio", "xMidYMid meet")
+      .style("overflow", "visible");
     const g = svg.append("g").attr("transform", `translate(${width / 2},${height / 2})`);
 
-    const root = d3.hierarchy(data).sum((d) => (d.children ? 0 : 1));
+    const root = d3.hierarchy(data);
+    root.eachAfter((node) => {
+      if (!node.children) {
+        const themeName = node.parent && node.parent.depth === 1 ? node.parent.data.name : node.data.name;
+        const siblings = node.parent ? node.parent.children.length : 1;
+        node.value = themeScore(row, themeName) / siblings;
+      } else {
+        node.value = d3.sum(node.children, (c) => c.value);
+      }
+    });
     d3.partition().size([2 * Math.PI, radius])(root);
 
     const arc = d3.arc()
       .startAngle((d) => d.x0)
       .endAngle((d) => d.x1)
-      .padAngle(0.01)
+      .padAngle(0.012)
       .padRadius(radius / 3)
       .innerRadius((d) => d.y0)
       .outerRadius((d) => Math.max(d.y0, d.y1 - 2));
 
-    arcs = g.selectAll("path")
+    const selected = MissionControl.state.theme;
+
+    g.selectAll("path")
       .data(root.descendants())
       .join("path")
       .attr("d", arc)
+      .attr("fill", (d) => colorOf(d))
+      .attr("fill-opacity", (d) => {
+        if (!selected) return d.depth === 0 ? 0.95 : 0.82;
+        return d.data.name === selected || hasAncestor(d, selected) || hasDescendantName(d, selected) ? 1 : 0.18;
+      })
+      .attr("stroke", (d) => (d.data.name === selected ? "#2c2824" : "rgba(44,40,36,0.12)"))
+      .attr("stroke-width", (d) => (d.data.name === selected ? 2 : 0.5))
       .style("cursor", "pointer")
       .on("click", (event, d) => MissionControl.selectTheme(d.data.name))
       .on("mouseover", (event, d) => {
-        d3.select(event.currentTarget).attr("fill-opacity", 1);
-        MissionControl.tooltip.show(event, d.data.name);
+        const score = rawScore(row, d);
+        const label = score == null ? d.data.name : `${d.data.name}<br>${row.county}: ${(+score).toFixed(3)}`;
+        MissionControl.tooltip.show(event, label);
       })
-      .on("mousemove", (event, d) => MissionControl.tooltip.show(event, d.data.name))
-      .on("mouseout", (event) => {
-        d3.select(event.currentTarget).attr("fill-opacity", null);
-        MissionControl.tooltip.hide();
-        Viz.updateTaxonomy();
-      });
+      .on("mousemove", (event, d) => {
+        const score = rawScore(row, d);
+        const label = score == null ? d.data.name : `${d.data.name}<br>${row.county}: ${(+score).toFixed(3)}`;
+        MissionControl.tooltip.show(event, label);
+      })
+      .on("mouseout", () => MissionControl.tooltip.hide());
 
     g.selectAll("text.slice")
-      .data(root.descendants().filter((d) => d.depth === 1 && (d.x1 - d.x0) > 0.4))
+      .data(root.descendants().filter((d) => d.depth === 1 && (d.x1 - d.x0) > 0.35))
       .join("text")
       .attr("class", "slice")
       .attr("transform", (d) => {
@@ -76,38 +120,38 @@
       .attr("font-size", 10)
       .attr("font-family", "Source Sans 3")
       .attr("pointer-events", "none")
-      .text((d) => shortTheme(d.data.name));
+      .text((d) => `${shortTheme(d.data.name)} ${row ? d.data && themeScore(row, d.data.name).toFixed(2) : ""}`.trim());
 
     g.append("circle")
-      .attr("r", root.y1 ? root.children[0].y0 - 2 : 28)
-      .attr("fill", "#fbf7f1")
+      .attr("r", root.children ? Math.max(24, root.children[0].y0 - 4) : 28)
+      .attr("fill", "#fffdf8")
       .attr("stroke", "#7d9a86")
       .style("cursor", "pointer")
       .on("click", () => MissionControl.selectTheme("Social Vulnerability Index (SVI)"));
 
     g.append("text")
       .attr("text-anchor", "middle")
-      .attr("y", 4)
+      .attr("y", row ? -4 : 4)
       .attr("fill", "#7d9a86")
       .attr("font-size", 11)
       .attr("font-family", "Fraunces")
       .attr("pointer-events", "none")
-      .text("SVI");
+      .text(row ? row.svi.toFixed(2) : "SVI");
 
-    Viz.updateTaxonomy();
+    if (row) {
+      g.append("text")
+        .attr("text-anchor", "middle")
+        .attr("y", 12)
+        .attr("fill", "#7a7168")
+        .attr("font-size", 9)
+        .attr("font-family", "Source Sans 3")
+        .attr("pointer-events", "none")
+        .text("SVI");
+    }
   };
 
   Viz.updateTaxonomy = function () {
-    if (!arcs) return;
-    const selected = MissionControl.state.theme;
-    arcs
-      .attr("fill", (d) => colorOf(d))
-      .attr("fill-opacity", (d) => {
-        if (!selected) return d.depth === 0 ? 0.9 : 0.82;
-        return d.data.name === selected || hasAncestor(d, selected) || hasDescendantName(d, selected) ? 1 : 0.18;
-      })
-      .attr("stroke", (d) => (d.data.name === selected ? "#2c2824" : "rgba(44,40,36,0.12)"))
-      .attr("stroke-width", (d) => (d.data.name === selected ? 2 : 0.5));
+    Viz.drawTaxonomy();
   };
 
   function hasAncestor(d, name) {

@@ -18,10 +18,10 @@
       { axis: "Housing", value: row.theme4, theme: "Housing Type & Transportation" }
     ]];
 
-    const margin = { top: 36, right: 36, bottom: 36, left: 36 };
+    const margin = { top: 52, right: 52, bottom: 52, left: 52 };
     const w = Math.max(120, width - margin.left - margin.right);
     const h = Math.max(120, height - margin.top - margin.bottom);
-    const radius = Math.min(w, h) / 2;
+    const radius = Math.min(w, h) / 2 * 0.78;
     const levels = 4;
     const axes = data[0].map((d) => d.axis);
     const angleSlice = (Math.PI * 2) / axes.length;
@@ -31,7 +31,8 @@
     const svg = d3.select(el)
       .append("svg")
       .attr("viewBox", `0 0 ${width} ${height}`)
-      .attr("preserveAspectRatio", "xMidYMid meet");
+      .attr("preserveAspectRatio", "xMidYMid meet")
+      .style("overflow", "visible");
 
     const g = svg.append("g")
       .attr("transform", `translate(${width / 2},${height / 2})`);

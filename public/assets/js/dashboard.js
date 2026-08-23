@@ -290,6 +290,13 @@ const MissionControl = {
   renderIntel() {
     const feed = document.getElementById("intel-feed");
     const stamp = document.getElementById("intel-stamp");
+    const title = document.getElementById("intel-title");
+    const radarTitle = document.getElementById("radar-title");
+    const taxonomyTitle = document.getElementById("taxonomy-title");
+    const county = this.state.county;
+    if (title) title.textContent = county ? `About this ${county}` : "About this county";
+    if (radarTitle) radarTitle.textContent = county ? `SVI themes for ${county}` : "SVI themes for this county";
+    if (taxonomyTitle) taxonomyTitle.textContent = county ? `What SVI measures in ${county}` : "What SVI measures";
     const mode = this.state.intelMode;
     stamp.textContent =
       mode === "county" ? "County" :
