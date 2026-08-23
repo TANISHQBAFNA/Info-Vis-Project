@@ -324,6 +324,8 @@ const MissionControl = {
 
   overviewIntel() {
     const high = this.data.svi.filter((d) => d.band === "high").length;
+    const top = this.data.svi.slice(0, 5);
+    const bottom = this.data.svi.slice(-5).reverse();
     return `
       <p class="intel-kicker">MISSION BRIEF</p>
       <h3>COVID-19 DID NOT LAND EVENLY</h3>
@@ -331,6 +333,11 @@ const MissionControl = {
       <p class="intel-body">While some people shifted to remote work and grocery delivery, others had to keep showing up so the rest of society could function. Social identity decided inclusion. Inclusion decided <strong>vulnerability</strong>.</p>
       <p class="intel-body">This console binds Virginia’s county-level COVID telemetry to CDC’s Social Vulnerability Index. ${this.data.svi.length} jurisdictions. ${high} sit in the high band. Click anything that glows — a bar, a ring, an axis, a case layer — and the briefing rewrites.</p>
       <div class="callout">Every community faces disasters. Poverty, no vehicle, crowded housing: those are not side notes. They are the SVI. They decide who can get out, who can stay home, and who gets sick first.</div>
+      <p class="intel-kicker">HIGHEST SVI — LOCK A TARGET</p>
+      <div class="chip-list">${top.map((d) => `<button class="chip" data-county="${escapeAttr(d.county)}" type="button">${d.county}</button>`).join("")}</div>
+      <p class="intel-kicker">LOWEST SVI — THE BUFFERED EDGE</p>
+      <div class="chip-list">${bottom.map((d) => `<button class="chip" data-county="${escapeAttr(d.county)}" type="button">${d.county}</button>`).join("")}</div>
+      <p class="intel-body">Method notes: circular array after <a href="https://d3-graph-gallery.com/circular_barplot.html" target="_blank" rel="noopener">d3-graph-gallery</a>. Index definitions from CDC/ATSDR SVI. Case stream is VDH daily counts for five high-SVI sentinels, Mar 2020–May 2022.</p>
     `;
   },
 
