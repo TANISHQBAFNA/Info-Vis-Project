@@ -124,7 +124,7 @@ a {
   display: grid;
   flex: 1;
   grid-template-columns: 1.25fr 0.75fr;
-  grid-template-rows: minmax(300px, 34vh) 520px minmax(340px, 1fr);
+  grid-template-rows: minmax(300px, 34vh) auto minmax(340px, 1fr);
   grid-template-areas:
     "cases cases"
     "combo combo"
@@ -326,9 +326,10 @@ a {
 
 .panel-combo {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.8fr);
-  height: 520px;
-  max-height: 520px;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  grid-template-rows: min-content;
+  align-items: stretch;
+  height: auto;
   overflow: hidden;
 }
 
@@ -337,18 +338,41 @@ a {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 0;
   overflow: hidden;
 }
 
 .combo-chart {
+  min-height: 0;
   border-right: 1px solid var(--line);
 }
 
+/* Height 0 so About copy does not grow the card; min-height stretches to the graph. */
+.combo-notes {
+  height: 0;
+  min-height: 100%;
+  max-height: 100%;
+}
+
 .combo-notes .intel-feed {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.combo-notes .panel-head {
+  flex: 0 0 auto;
+}
+
+.combo-notes .intel-feed::-webkit-scrollbar {
+  width: 8px;
+}
+
+.combo-notes .intel-feed::-webkit-scrollbar-thumb {
+  background: #cfc3b3;
+  border-radius: 8px;
 }
 
 .panel-head {
@@ -403,10 +427,19 @@ a {
   overflow: hidden;
 }
 
-.chart-mount-hero,
-.chart-mount-svi {
+.chart-mount-hero {
   flex: 1;
   min-height: 0;
+}
+
+/* Square graph sizes the SVI + About card; About scrolls beside it. */
+.chart-mount-svi {
+  flex: 0 0 auto;
+  width: 100%;
+  height: auto;
+  min-height: 280px;
+  aspect-ratio: 1 / 1;
+  max-height: min(560px, 70vh);
 }
 
 .chart-mount svg {
@@ -634,22 +667,6 @@ a {
       "factors";
   }
 
-  .panel-combo {
-    grid-template-columns: 1fr;
-    height: auto;
-    max-height: none;
-  }
-
-  .combo-chart {
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-    height: 440px;
-  }
-
-  .combo-notes {
-    height: 420px;
-  }
-
   .chart-mount-hero {
     min-height: 300px;
   }
@@ -672,5 +689,25 @@ a {
   .kpis,
   .command-row {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .panel-combo {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+  }
+
+  .combo-chart {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .combo-notes {
+    height: auto;
+    min-height: 0;
+    max-height: min(52vh, 420px);
+  }
+
+  .chart-mount-svi {
+    max-height: min(420px, 70vh);
   }
 }

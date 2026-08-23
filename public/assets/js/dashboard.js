@@ -79,6 +79,7 @@ const MissionControl = {
     this.observeResize();
     this.drawAll();
     this.selectCounty("Galax City", { mode: "county" });
+    this.lockComboToChart();
     document.getElementById("boot-screen").classList.add("is-done");
     this.startClocks();
   },
@@ -88,6 +89,28 @@ const MissionControl = {
     if (window.MCViz?.drawRadar) MCViz.drawRadar();
     if (window.MCViz?.drawStacked) MCViz.drawStacked();
     if (window.MCViz?.drawTaxonomy) MCViz.drawTaxonomy();
+    this.lockComboToChart();
+  },
+
+  lockComboToChart() {
+    const chart = document.getElementById("panel-array");
+    const notes = document.getElementById("panel-intel");
+    if (!chart || !notes) return;
+    const stacked = window.matchMedia("(max-width: 760px)").matches;
+    if (stacked) {
+      notes.style.height = "";
+      notes.style.maxHeight = "";
+      return;
+    }
+    const apply = () => {
+      const h = Math.round(chart.getBoundingClientRect().height);
+      if (h > 0) {
+        notes.style.height = `${h}px`;
+        notes.style.maxHeight = `${h}px`;
+      }
+    };
+    apply();
+    requestAnimationFrame(apply);
   },
 
   observeResize() {
@@ -97,6 +120,12 @@ const MissionControl = {
       const el = document.getElementById(id);
       if (el) ro.observe(el);
     });
+    const comboChart = document.getElementById("panel-array");
+    if (comboChart) {
+      const lock = debounce(() => this.lockComboToChart(), 80);
+      new ResizeObserver(lock).observe(comboChart);
+    }
+    window.addEventListener("resize", debounce(() => this.lockComboToChart(), 80));
   },
 
   bindChrome() {
@@ -320,6 +349,7 @@ const MissionControl = {
     feed.querySelectorAll("[data-case]").forEach((el) => {
       el.addEventListener("click", () => this.selectCaseKey(el.dataset.case));
     });
+    this.lockComboToChart();
   },
 
   overviewIntel() {
