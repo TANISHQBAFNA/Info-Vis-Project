@@ -1,0 +1,10 @@
+{
+  "rbi_hpi_all_india": 115.9,
+  "rbi_hpi_quarter": "Q4:2025-26",
+  "rbi_hpi_base": "2022-23",
+  "rbi_hpi_note": "All-India House Price Index from RBI press release 29 May 2026. City-level Mumbai/Thane series live on DBIE; not a public JSON API.",
+  "rent_2bhk_inr": 64400,
+  "rent_source": "Magicbricks Mumbai Rent Index, Jul\u2013Sep 2024, average 2 BHK. Named research exception. Not mapped to wards.",
+  "asr_vintage": "FY2025-26 rates held for FY2026-27 (0% revision)",
+  "n_wards": 24
+}
