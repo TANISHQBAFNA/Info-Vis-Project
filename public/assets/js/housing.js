@@ -166,7 +166,8 @@
       });
       this.renderMetrics();
       this.renderKpis();
-      this.renderAbout();
+      try { this.renderAbout(); }
+      catch (err) { console.warn("about fail", err); }
       this.drawMap();
       this.drawTime();
       this.stamp();
@@ -230,6 +231,7 @@
       const m = this.metricDef();
       if (stamp) stamp.textContent = m.hint;
       const fmt = global.HousingMaps.fmt;
+      const spark = global.HousingMaps.spark;
       if (this.place === "va") {
         const homeP = global.HousingPath && HousingPath.project(w.zhviSeries, { officialYoy: w.zhvfYoy, years: 5 });
         const rentP = global.HousingPath && HousingPath.project(w.zoriSeries, { years: 5 });
