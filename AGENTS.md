@@ -37,14 +37,14 @@ Prefer running the server in a long-lived tmux session so logs stay visible.
 
 ### Notes / gotchas
 
-- The page pulls D3, fonts, Zillow CSVs, Census Reporter, and Open-Meteo from
-  public CDNs/APIs at runtime, so maps only fully render with outbound internet.
-  Egress is unrestricted in this environment.
+- The page pulls D3, fonts, Zillow CSVs, and Census Reporter from public
+  CDNs/APIs at runtime, so Virginia charts only fully render with outbound
+  internet. Egress is unrestricted in this environment.
 - Core interactive flow to smoke-test: homepage loads Virginia ZHVI choropleth
   from live Zillow. Click a county — About panel fills with price, market, rent,
-  ACS stats and 24-month sparklines. Toggle Mumbai — ASR map plus live AQI/weather.
-  Metric chips with a green dot are live fetches; HUD FMR and $/ft² are yearly
-  overlays.
+  ACS stats and the 10-year walk / 5-year cone. Toggle Mumbai — ASR map, unit
+  floors, stamp illustration, Census 2011 stock. No AQI/weather. Metric chips
+  with a green dot are live fetches; HUD FMR, $/ft², and Mumbai ASR are yearly.
 - Do not put API keys in `public/`. Do not fetch the ~230 MB Redfin county file
   in the browser. Do not scrape listing portals.
 - Deploying (`firebase deploy`) targets the real `infoviz-cs5764` site and

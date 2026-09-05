@@ -21,6 +21,13 @@
     if (kind === "ppsf") return "$" + d3.format(",.0f")(n) + "/ft²";
     if (kind === "rent") return "$" + d3.format(",.0f")(n) + "/mo";
     if (kind === "inr") return "₹" + d3.format(",.0f")(n) + "/ft²";
+    if (kind === "inr_sqm") return "₹" + d3.format(",.0f")(n) + "/m²";
+    if (kind === "inr_amt") {
+      if (n >= 1e7) return "₹" + d3.format(".2f")(n / 1e7) + " Cr";
+      if (n >= 1e5) return "₹" + d3.format(".1f")(n / 1e5) + " L";
+      return "₹" + d3.format(",.0f")(n);
+    }
+    if (kind === "rank") return "#" + d3.format(".0f")(n);
     if (kind === "pct") return d3.format(".1f")(n) + "%";
     if (kind === "yoy") return (n > 0 ? "+" : "") + d3.format(".1f")(n) + "%";
     if (kind === "days") return d3.format(",.0f")(n) + " days";

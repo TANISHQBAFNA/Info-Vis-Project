@@ -1,0 +1,103 @@
+{
+  "vintage": "Census of India 2011",
+  "source": "ORGI via OpenCity ward census (PCA households + ward population).",
+  "note": "Electoral/census sub-wards aggregated to the 24 BMC administrative wards.",
+  "byId": {
+    "A": {
+      "pop": 185014,
+      "households": 43866
+    },
+    "B": {
+      "pop": 127290,
+      "households": 27140
+    },
+    "C": {
+      "pop": 166161,
+      "households": 36479
+    },
+    "D": {
+      "pop": 346866,
+      "households": 77556
+    },
+    "E": {
+      "pop": 393286,
+      "households": 78346
+    },
+    "F/S": {
+      "pop": 360972,
+      "households": 79733
+    },
+    "F/N": {
+      "pop": 529034,
+      "households": 119624
+    },
+    "G/S": {
+      "pop": 377749,
+      "households": 83457
+    },
+    "G/N": {
+      "pop": 599039,
+      "households": 128138
+    },
+    "H/W": {
+      "pop": 307581,
+      "households": 72943
+    },
+    "H/E": {
+      "pop": 557239,
+      "households": 120266
+    },
+    "K/W": {
+      "pop": 748688,
+      "households": 168076
+    },
+    "K/E": {
+      "pop": 823885,
+      "households": 190845
+    },
+    "P/N": {
+      "pop": 941366,
+      "households": 211642
+    },
+    "P/S": {
+      "pop": 463507,
+      "households": 106922
+    },
+    "R/S": {
+      "pop": 691229,
+      "households": 159639
+    },
+    "R/C": {
+      "pop": 562162,
+      "households": 134795
+    },
+    "R/N": {
+      "pop": 431368,
+      "households": 104091
+    },
+    "L": {
+      "pop": 902225,
+      "households": 186833
+    },
+    "M/E": {
+      "pop": 807720,
+      "households": 166400
+    },
+    "M/W": {
+      "pop": 411893,
+      "households": 93607
+    },
+    "N": {
+      "pop": 622853,
+      "households": 137885
+    },
+    "S": {
+      "pop": 743783,
+      "households": 169962
+    },
+    "T": {
+      "pop": 341463,
+      "households": 81698
+    }
+  }
+}

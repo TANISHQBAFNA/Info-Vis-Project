@@ -8,11 +8,11 @@
     "mumbai_sale": "igr_asr_ward_midpoint",
     "mumbai_sale_note": "IGR Maharashtra Annual Statement of Rates (ready reckoner) FY 2025-26 / frozen FY 2026-27, compiled to 24 BMC wards. No public JSON API.",
     "mumbai_rent": "city_only_omit_locality",
-    "mumbai_rent_note": "No official locality rent ₹/sq ft. City KPI uses Magicbricks Mumbai Rent Index 2BHK average as a named research exception. Not mapped onto wards.",
-    "mumbai_nowcast": "open_meteo_weather_aqi",
+    "mumbai_rent_note": "No official locality rent ₹/sq ft. City KPI uses Magicbricks Mumbai Rent Index 2BHK average as a named research exception. Used only in the years-of-rent ratio against a ward 1,000 ft² RR floor.",
+    "mumbai_stock": "census_2011_ward_households",
     "mumbai_city_index": "rbi_hpi",
     "refresh": "browser_fetch_plus_yearly_overlays",
-    "refresh_note": "Zillow county CSVs, metro ZHVF (12-month growth), and Census Reporter ACS are fetched in the browser (CORS *) and cached ~12h via Cache API. Open-Meteo weather/AQI cached 15 min in sessionStorage. HUD FMR, Redfin PPSF, IGR ASR stay as small committed files. 5-year cones are trailing CAGR ± yearly volatility after Zillow's official 12-month metro forecast — not a priced 5-year model. No HUD/Census/FRED keys in client JS."
+    "refresh_note": "Zillow county CSVs, metro ZHVF, and Census Reporter ACS are fetched in the browser (CORS *) and cached ~12h. HUD FMR, Redfin PPSF, IGR ASR, and Census 2011 ward stock stay as small committed files. No weather. No HUD/Census/FRED keys in client JS."
   },
   "live": {
     "zillow_cdn": "https://files.zillowstatic.com/research/public_csvs/",
@@ -28,14 +28,11 @@
       "market_temp_index"
     ],
     "census_reporter": "https://api.censusreporter.org/1.0/data/show/latest",
-    "open_meteo": [
-      "https://api.open-meteo.com/v1/forecast",
-      "https://air-quality-api.open-meteo.com/v1/air-quality"
-    ],
     "not_live": [
       "Redfin county tracker (~230 MB) — PPSF overlay only",
       "HUD USER FMR xlsx — WAF blocked; FY2026 2BR JSON overlay",
-      "IGR ASR / NHB Residex / RBI DBIE — no public JSON API"
+      "IGR ASR / NHB Residex / RBI DBIE — no public JSON API",
+      "Mumbai locality rents — no official ward series"
     ]
   },
   "vintages": {
@@ -44,6 +41,7 @@
     "hud_fmr": "FY2026",
     "acs": "Census Reporter latest (ACS 5-year)",
     "mumbai_asr": "FY2025-26 rates held for FY2026-27 (0% revision)",
+    "mumbai_census": "Census of India 2011",
     "rbi_hpi": "Q4:2025-26",
     "mumbai_rent": "Magicbricks JAS 2024"
   },
@@ -52,9 +50,9 @@
     "Census Reporter API wrapping U.S. Census Bureau ACS 5-year tables B25064, B25077, B25002, B25003, B25070, B25031, B01003, B25001.",
     "Redfin Data Center, county housing market tracker, median sale price per square foot (committed overlay only).",
     "U.S. Department of Housing and Urban Development, FY 2026 Fair Market Rents, 2-bedroom.",
-    "Open-Meteo, weather forecast and air-quality APIs at BMC ward centroids.",
     "Reserve Bank of India, House Price Index, base 2022-23, Q4:2025-26.",
     "Department of Registration and Stamps, Maharashtra, Annual Statement of Rates (ready reckoner), FY 2025-26 rates held for FY 2026-27.",
+    "Office of the Registrar General & Census Commissioner, India, Census 2011, ward population and households aggregated to 24 BMC administrative wards (OpenCity).",
     "OpenCity / MCGM, BMC administrative ward boundaries (ODbL).",
     "U.S. Census Bureau, cartographic county boundaries for Virginia."
   ]

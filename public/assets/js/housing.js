@@ -1,5 +1,5 @@
 /**
- * Dual-place housing dashboard. Zillow + Census + Open-Meteo at runtime.
+ * Dual-place housing dashboard. Zillow + Census at runtime; Mumbai ASR + census stock.
  */
 (function (global) {
   "use strict";
@@ -23,11 +23,12 @@
       { id: "acs_rent", label: "ACS rent / mo", kind: "rent", group: "Rent", live: true, hint: "Census ACS median gross rent via Census Reporter" }
     ],
     mumbai: [
-      { id: "asr_psf", label: "ASR ₹ / sq ft", kind: "inr", group: "Price", live: false, hint: "IGR ready reckoner midpoint — no public JSON API" },
-      { id: "aqi", label: "US AQI now", kind: "aqi", group: "Now", live: true, hint: "Open-Meteo air quality at ward centroid" },
-      { id: "pm25", label: "PM2.5", kind: "pm", group: "Now", live: true, hint: "Open-Meteo PM2.5 µg/m³" },
-      { id: "temp", label: "Temp now", kind: "temp", group: "Now", live: true, hint: "Open-Meteo temperature at ward centroid" },
-      { id: "rain", label: "Rain today", kind: "rain", group: "Now", live: true, hint: "Open-Meteo daily precipitation sum, Asia/Kolkata" }
+      { id: "asr_psf", label: "ASR ₹ / sq ft", kind: "inr", group: "Floor", live: false, hint: "IGR ready reckoner midpoint — stamp-duty floor, not transacted price" },
+      { id: "asr_sqm", label: "ASR ₹ / sq m", kind: "inr_sqm", group: "Floor", live: false, hint: "Same ready-reckoner rate before conversion to sq ft" },
+      { id: "floor_1000", label: "1,000 ft² RR floor", kind: "inr_amt", group: "Unit", live: false, hint: "Ready-reckoner value of 1,000 carpet sq ft in this ward" },
+      { id: "years_city_rent", label: "Years of city 2BHK rent", kind: "years", group: "Unit", live: false, hint: "Ward 1,000 ft² RR floor ÷ (Magicbricks city 2BHK rent × 12). City rent, ward floor." },
+      { id: "households", label: "Census households", kind: "count", group: "Stock", live: false, hint: "Census 2011 households aggregated to this BMC ward" },
+      { id: "vs_peak", label: "% of Malabar Hill", kind: "pct", group: "Stock", live: false, hint: "This ward’s ASR as a share of Ward D (Malabar Hill), the 24-ward peak" }
     ]
   };
 
@@ -231,7 +232,6 @@
       const m = this.metricDef();
       if (stamp) stamp.textContent = m.hint;
       const fmt = global.HousingMaps.fmt;
-      const spark = global.HousingMaps.spark;
       if (this.place === "va") {
         const homeP = global.HousingPath && HousingPath.project(w.zhviSeries, { officialYoy: w.zhvfYoy, years: 5 });
         const rentP = global.HousingPath && HousingPath.project(w.zoriSeries, { years: 5 });
@@ -289,29 +289,29 @@
            <p class="combo-meta">${this.liveNoteVa()}</p>`;
       } else {
         const city = this.mx && this.mx.city;
-        const tSpark = spark(w.tempSeries);
-        const rSpark = spark(w.rainSeries);
         feed.innerHTML =
-          `<p class="intel-lede">${esc(w.places)} · BMC ward ${esc(w.id)}. ASR is the stamp-duty floor. Weather and AQI are live at the ward centroid.</p>
-           <h3 class="feed-h">Official price floor</h3>
+          `<p class="intel-lede">${esc(w.places)} · BMC ward ${esc(w.id)} · ${esc(w.region || "")}. Ready reckoner is the stamp-duty floor, usually below transacted price.</p>
+           <h3 class="feed-h">Ready reckoner</h3>
            <div class="stat-grid">
              ${stat("ASR ₹ / sq ft", fmt(w.asr_psf, "inr"), city && city.asr_vintage)}
-             ${stat("ASR ₹ / sq m", "₹" + d3.format(",")(+w.asr_sqm), "IGR ready reckoner")}
+             ${stat("ASR ₹ / sq m", fmt(w.asr_sqm, "inr_sqm"), "IGR Maharashtra")}
+             ${stat("Rank of 24", fmt(w.asr_rank, "rank"), "1 = highest floor")}
+             ${stat("vs 24-ward median", fmt(w.vs_median, "pct"))}
+             ${stat("% of Malabar Hill", fmt(w.vs_peak, "pct"), "Ward D peak")}
            </div>
-           <h3 class="feed-h">Now at this ward</h3>
+           <h3 class="feed-h">What a home costs at this floor</h3>
            <div class="stat-grid">
-             ${stat("US AQI", fmt(w.aqi, "aqi"))}
-             ${stat("PM2.5", fmt(w.pm25, "pm"))}
-             ${stat("PM10", fmt(w.pm10, "pm"))}
-             ${stat("Temperature", fmt(w.temp, "temp"))}
-             ${stat("Humidity", Number.isFinite(w.humidity) ? d3.format(".0f")(w.humidity) + "%" : "—")}
-             ${stat("Wind", Number.isFinite(w.wind) ? d3.format(".1f")(w.wind) + " km/h" : "—")}
-             ${stat("Rain today", fmt(w.rain, "rain"))}
-             ${stat("Precip now", fmt(w.precipNow, "rain"))}
+             ${stat("650 ft² 1BHK floor", fmt(w.floor_650, "inr_amt"), "typical carpet 1BHK")}
+             ${stat("1,000 ft² 2BHK floor", fmt(w.floor_1000, "inr_amt"), "typical carpet 2BHK")}
+             ${stat("6% stamp on 650 ft²", fmt(w.stamp_650, "inr_amt"), "illustration on RR value, not a quote")}
+             ${stat("Years of city 2BHK rent", fmt(w.years_city_rent, "years"), "1,000 ft² RR ÷ city rent × 12")}
            </div>
-           ${tSpark ? `<p class="spark-label">Temperature, next 48h</p>${tSpark}` : ""}
-           ${rSpark ? `<p class="spark-label">Precipitation, next 48h</p>${rSpark}` : ""}
-           <p class="intel-body">Ready reckoner is usually below transacted price. Mapped onto 24 BMC wards because that is the polygon set we can draw. Residex locality ₹/ft² and Magicbricks listings have no CORS JSON API — not scraped. City 2BHK rent is a named research KPI, not a ward layer.</p>
+           <h3 class="feed-h">Housing stock (Census 2011)</h3>
+           <div class="stat-grid">
+             ${stat("Households", fmt(w.households, "count"), "aggregated to this BMC ward")}
+             ${stat("Population", fmt(w.pop, "count"), "Census 2011")}
+           </div>
+           <p class="intel-body">No official locality rent ₹/ft² and no Residex JSON API — not scraped. City 2BHK rent ₹${city ? d3.format(",")(city.rent_2bhk_inr) : "—"} (Magicbricks) is a city KPI used only in the years-of-rent ratio. RBI HPI is all-India ${city ? city.rbi_hpi_all_india : ""}, not a ward series.</p>
            <p class="combo-meta">${this.liveNoteMx()}</p>`;
       }
     },
@@ -331,12 +331,12 @@
     liveNoteMx() {
       const mx = this.mx || {};
       const city = mx.city || {};
+      const census = mx.census || {};
       const bits = [];
-      bits.push(mx.live && mx.live.weather ? "Open-Meteo live" : "weather unavailable");
-      if (mx.fetchedAt) bits.push("wx " + mx.fetchedAt.replace("T", " ").slice(0, 16) + "Z");
       bits.push(city.asr_vintage || "ASR");
+      bits.push(census.vintage || "Census 2011");
       bits.push("RBI HPI " + (city.rbi_hpi_all_india || "") + " " + (city.rbi_hpi_quarter || ""));
-      if (mx.errors && mx.errors.length) bits.push("errors: " + mx.errors.join("; "));
+      bits.push("city 2BHK rent ₹" + d3.format(",")(city.rent_2bhk_inr || 0));
       return bits.join(" · ");
     },
 
@@ -352,7 +352,7 @@
       if (hint) {
         hint.textContent = this.place === "va"
           ? (m.live ? "Live Zillow / Census · each shape is a county or independent city" : "Yearly overlay · each shape is a county or independent city")
-          : (m.live ? "Live Open-Meteo at ward centroid" : "Each shape is a BMC administrative ward");
+          : "Each shape is a BMC administrative ward · ready reckoner + Census 2011 stock";
       }
       if (!global.HousingMaps || !this.geo()) return;
       try {
@@ -379,7 +379,11 @@
       if (!global.HousingPath) return;
       if (this.place === "va") {
         const w = this.selected();
+        const leftH = document.getElementById("time-h-left");
+        const rightH = document.getElementById("time-h-right");
         if (title) title.textContent = (w ? w.name : "County") + " · 10-year walk and 5-year cone";
+        if (leftH) leftH.textContent = "Walk · rent × home value";
+        if (rightH) rightH.textContent = "Index · 10y ago = 100, then a cone";
         if (hint) {
           hint.textContent = Number.isFinite(w && w.zhvfYoy)
             ? "Left: rent×price path (iso-yield diagonals). Right: index 10y ago = 100. Dashed = trend; Y1 home uses Zillow metro forecast."
@@ -392,10 +396,20 @@
           console.warn("time fail", err);
         }
       } else {
-        if (title) title.textContent = "Mumbai · pay vs air (no 10-year ward series)";
-        if (hint) hint.textContent = "IGR ASR has no locality time series. Scatter is yearly ₹/ft² vs live AQI — a different cut, not a fake history.";
+        const leftH = document.getElementById("time-h-left");
+        const rightH = document.getElementById("time-h-right");
+        if (title) title.textContent = "Mumbai · ready-reckoner ladder and housing stock";
+        if (hint) hint.textContent = "No 10-year ward price series. Cross-section of 24 ASR floors vs Census 2011 households — not weather, not invented history.";
+        if (leftH) leftH.textContent = "Ladder · ASR ₹ / sq ft";
+        if (rightH) rightH.textContent = "Stock · RR floor vs 2011 households";
         try {
-          HousingPath.drawMxNow({
+          HousingPath.drawMxLadder({
+            rows: this.rows(),
+            selectedId: this.selectedId,
+            onSelect: (id) => this.select(id),
+            tip
+          });
+          HousingPath.drawMxStock({
             rows: this.rows(),
             selectedId: this.selectedId,
             onSelect: (id) => this.select(id),
@@ -419,12 +433,9 @@
             : "Live Zillow fetch failed; showing committed fallback where needed. " + ((this.va && this.va.errors) || []).join("; ");
         }
       } else {
-        const live = this.mx && this.mx.live && this.mx.live.weather;
-        if (el) el.textContent = live ? "Open-Meteo live" : "ASR only";
+        if (el) el.textContent = "ASR + Census 2011";
         if (tick) {
-          tick.textContent = live
-            ? "IGR ASR ₹/ft² is the official yearly floor (no JSON API). AQI, PM, rain, temp fetch from Open-Meteo at each ward centroid every 15 minutes."
-            : "Open-Meteo blocked or failed. ASR snapshot still mapped. " + ((this.mx && this.mx.errors) || []).join("; ");
+          tick.textContent = "IGR ready reckoner ₹/ft² is the stamp-duty floor. Unit floors, stamp illustration, and years of city 2BHK rent are derived from that. Households/population are Census 2011. No weather.";
         }
       }
     },

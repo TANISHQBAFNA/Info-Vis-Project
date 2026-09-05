@@ -2,7 +2,7 @@
  * Time views that are not choropleths:
  *  - connected scatter: 10y walk through rent × home-value space
  *  - indexed fan: observed path + 5y cone (Zillow metro Y1, then CAGR)
- *  - Mumbai now-scatter: ASR ₹/ft² vs live AQI (no 10y ward series exists)
+ *  - Mumbai: ASR ladder + RR floor vs Census 2011 households (no weather)
  */
 (function (global) {
   "use strict";
@@ -321,24 +321,18 @@
     });
   }
 
-  function drawMxNow(opts) {
+  function drawMxLadder(opts) {
     const { el, width, height } = sizeOf("path-walk", 300);
-    const fanEl = document.getElementById("path-fan");
-    if (fanEl) {
-      fanEl.innerHTML = "";
-      d3.select(fanEl).append("p").attr("class", "path-empty")
-        .text("No 10-year ward rent or transacted-price series. IGR ASR is a yearly stamp-duty floor. Residex and RBI city HPI have no CORS JSON. Cone stays empty on purpose — we will not invent Mumbai prices.");
-    }
     if (!el) return;
-    const rows = (opts.rows || []).filter((r) => Number.isFinite(r.asr_psf));
+    const rows = (opts.rows || []).filter((r) => Number.isFinite(r.asr_psf))
+      .slice().sort((a, b) => b.asr_psf - a.asr_psf);
     if (!rows.length) { empty(el, "No ASR points."); return; }
     el.innerHTML = "";
-    const pad = { t: 18, r: 16, b: 36, l: 44 };
+    const pad = { t: 8, r: 64, b: 28, l: 92 };
     const innerW = width - pad.l - pad.r;
     const innerH = height - pad.t - pad.b;
-    const yKey = rows.some((r) => Number.isFinite(r.aqi)) ? "aqi" : "temp";
-    const x = d3.scaleLinear().domain(padExtent(d3.extent(rows, (d) => d.asr_psf))).range([0, innerW]);
-    const y = d3.scaleLinear().domain(padExtent(d3.extent(rows, (d) => d[yKey]))).range([innerH, 0]);
+    const x = d3.scaleLinear().domain([0, d3.max(rows, (d) => d.asr_psf)]).range([0, innerW]);
+    const y = d3.scaleBand().domain(rows.map((d) => d.id)).range([0, innerH]).padding(0.22);
     const svg = d3.select(el).append("svg")
       .attr("viewBox", "0 0 " + width + " " + height)
       .attr("preserveAspectRatio", "xMidYMid meet");
@@ -346,29 +340,91 @@
     g.append("g").attr("transform", "translate(0," + innerH + ")")
       .call(d3.axisBottom(x).ticks(4).tickFormat((v) => "₹" + d3.format(".2s")(v)))
       .call(styleAxis);
-    g.append("g").call(d3.axisLeft(y).ticks(5)).call(styleAxis);
-    g.append("text").attr("x", innerW / 2).attr("y", innerH + 32)
-      .attr("text-anchor", "middle").attr("fill", MUTED).attr("font-size", 11).attr("font-family", FONT)
-      .text("ASR ₹ / sq ft (yearly floor)");
-    g.append("text").attr("transform", "rotate(-90)").attr("x", -innerH / 2).attr("y", -32)
-      .attr("text-anchor", "middle").attr("fill", MUTED).attr("font-size", 11).attr("font-family", FONT)
-      .text(yKey === "aqi" ? "US AQI now" : "Temp °C");
-
-    g.selectAll("circle")
+    g.selectAll("rect")
       .data(rows)
-      .join("circle")
-      .attr("cx", (d) => x(d.asr_psf))
-      .attr("cy", (d) => y(d[yKey]))
-      .attr("r", (d) => d.id === opts.selectedId ? 7 : 4)
+      .join("rect")
+      .attr("x", 0)
+      .attr("y", (d) => y(d.id))
+      .attr("width", (d) => x(d.asr_psf))
+      .attr("height", y.bandwidth())
       .attr("fill", (d) => d.id === opts.selectedId ? HOME : RENT)
-      .attr("opacity", (d) => d.id === opts.selectedId ? 1 : 0.75)
-      .attr("stroke", "#fffdf8")
+      .attr("opacity", (d) => d.id === opts.selectedId ? 1 : 0.72)
       .style("cursor", "pointer")
       .on("click", (event, d) => { if (opts.onSelect) opts.onSelect(d.id); })
       .on("mousemove", (event, d) => {
         if (!opts.tip) return;
         opts.tip(event, "<strong>" + d.name + "</strong><br>ASR ₹" + d3.format(",")(d.asr_psf) + "/ft²"
-          + (Number.isFinite(d.aqi) ? "<br>AQI " + d3.format(".0f")(d.aqi) : ""));
+          + "<br>rank " + d.asr_rank + " of 24");
+      })
+      .on("mouseleave", () => { if (opts.tip) opts.tip(null); });
+    g.selectAll("text.lab")
+      .data(rows)
+      .join("text")
+      .attr("class", "lab")
+      .attr("x", -6)
+      .attr("y", (d) => y(d.id) + y.bandwidth() / 2)
+      .attr("dy", "0.32em")
+      .attr("text-anchor", "end")
+      .attr("fill", INK)
+      .attr("font-size", 9)
+      .attr("font-family", FONT)
+      .text((d) => d.id);
+    g.selectAll("text.val")
+      .data(rows)
+      .join("text")
+      .attr("class", "val")
+      .attr("x", (d) => x(d.asr_psf) + 4)
+      .attr("y", (d) => y(d.id) + y.bandwidth() / 2)
+      .attr("dy", "0.32em")
+      .attr("fill", MUTED)
+      .attr("font-size", 9)
+      .attr("font-family", FONT)
+      .text((d) => d.id === opts.selectedId ? ("₹" + d3.format(",")(d.asr_psf)) : "");
+  }
+
+  function drawMxStock(opts) {
+    const { el, width, height } = sizeOf("path-fan", 300);
+    if (!el) return;
+    const rows = (opts.rows || []).filter((r) => Number.isFinite(r.asr_psf) && Number.isFinite(r.households));
+    if (!rows.length) { empty(el, "Census households missing."); return; }
+    el.innerHTML = "";
+    const pad = { t: 18, r: 16, b: 36, l: 48 };
+    const innerW = width - pad.l - pad.r;
+    const innerH = height - pad.t - pad.b;
+    const x = d3.scaleLinear().domain(padExtent(d3.extent(rows, (d) => d.asr_psf))).range([0, innerW]);
+    const y = d3.scaleLinear().domain(padExtent(d3.extent(rows, (d) => d.households))).range([innerH, 0]);
+    const svg = d3.select(el).append("svg")
+      .attr("viewBox", "0 0 " + width + " " + height)
+      .attr("preserveAspectRatio", "xMidYMid meet");
+    const g = svg.append("g").attr("transform", "translate(" + pad.l + "," + pad.t + ")");
+    g.append("g").attr("transform", "translate(0," + innerH + ")")
+      .call(d3.axisBottom(x).ticks(4).tickFormat((v) => "₹" + d3.format(".2s")(v)))
+      .call(styleAxis);
+    g.append("g").call(d3.axisLeft(y).ticks(4).tickFormat((v) => d3.format(".2s")(v)))
+      .call(styleAxis);
+    g.append("text").attr("x", innerW / 2).attr("y", innerH + 32)
+      .attr("text-anchor", "middle").attr("fill", MUTED).attr("font-size", 11).attr("font-family", FONT)
+      .text("ASR ₹ / sq ft (stamp-duty floor)");
+    g.append("text").attr("transform", "rotate(-90)").attr("x", -innerH / 2).attr("y", -34)
+      .attr("text-anchor", "middle").attr("fill", MUTED).attr("font-size", 11).attr("font-family", FONT)
+      .text("Census 2011 households");
+    g.selectAll("circle")
+      .data(rows)
+      .join("circle")
+      .attr("cx", (d) => x(d.asr_psf))
+      .attr("cy", (d) => y(d.households))
+      .attr("r", (d) => d.id === opts.selectedId ? 7 : 4.5)
+      .attr("fill", (d) => d.region === "Island City" ? HOME : RENT)
+      .attr("opacity", (d) => d.id === opts.selectedId ? 1 : 0.8)
+      .attr("stroke", (d) => d.id === opts.selectedId ? INK : "#fffdf8")
+      .attr("stroke-width", (d) => d.id === opts.selectedId ? 1.4 : 0.8)
+      .style("cursor", "pointer")
+      .on("click", (event, d) => { if (opts.onSelect) opts.onSelect(d.id); })
+      .on("mousemove", (event, d) => {
+        if (!opts.tip) return;
+        opts.tip(event, "<strong>" + d.name + "</strong><br>" + d.region
+          + "<br>ASR ₹" + d3.format(",")(d.asr_psf) + "/ft²"
+          + "<br>" + d3.format(",")(d.households) + " households (2011)");
       })
       .on("mouseleave", () => { if (opts.tip) opts.tip(null); });
   }
@@ -390,5 +446,5 @@
     sel.select(".domain").attr("stroke", "#e0d6c8");
   }
 
-  global.HousingPath = { drawWalk, drawFan, drawMxNow, project, yearly, alignedWalk };
+  global.HousingPath = { drawWalk, drawFan, drawMxLadder, drawMxStock, project, yearly, alignedWalk };
 })(window);

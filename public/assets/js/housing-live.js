@@ -1,8 +1,7 @@
 /**
  * Runtime housing feeds. Browser fetch only — no API keys.
  *
- * Live (CORS *): Zillow Research county CSVs, Census Reporter ACS,
- * Open-Meteo weather + air quality.
+ * Live (CORS *): Zillow Research county CSVs, Census Reporter ACS.
  * Yearly / no public JSON: HUD FMR, Redfin PPSF, IGR ASR, RBI HPI.
  */
 (function (global) {
@@ -27,8 +26,6 @@
   const META_KEY = "housing-live-meta";
   const ZILLOW_TTL = 12 * 3600 * 1000;
   const ACS_TTL = 24 * 3600 * 1000;
-  const WX_TTL = 15 * 60 * 1000;
-  const WX_STORE = "housing-mx-wx-v1";
 
   const HousingLive = {
     async loadVirginia(onProgress) {
@@ -92,47 +89,21 @@
 
     async loadMumbai(onProgress) {
       const say = onProgress || function () {};
-      const errors = [];
-      say("Loading Mumbai wards and ASR…");
-      const [geo, mxRows, mxCity] = await Promise.all([
+      say("Loading Mumbai ready-reckoner and census housing stock…");
+      const [geo, mxRows, mxCity, census] = await Promise.all([
         d3.json("assets/data/housing/mumbai-wards.geojson"),
         d3.csv("assets/data/housing/mumbai-wards.csv", parseMx),
-        d3.json("assets/data/housing/mumbai-city.json")
+        d3.json("assets/data/housing/mumbai-city.json"),
+        d3.json("assets/data/housing/mumbai-census.json")
       ]);
-
-      say("Fetching Open-Meteo weather + AQI (live)…");
-      let wxLive = false;
-      let wxAt = null;
-      try {
-        const wx = await loadMumbaiWeather(geo);
-        wxAt = wx.fetchedAt;
-        wxLive = true;
-        mxRows.forEach((row) => {
-          const w = wx.byId[row.id];
-          if (!w) return;
-          row.aqi = w.aqi;
-          row.pm25 = w.pm25;
-          row.pm10 = w.pm10;
-          row.temp = w.temp;
-          row.humidity = w.humidity;
-          row.wind = w.wind;
-          row.rain = w.rain;
-          row.precipNow = w.precipNow;
-          row.tempSeries = w.tempSeries;
-          row.rainSeries = w.rainSeries;
-          row.wxAt = w.fetchedAt;
-        });
-      } catch (err) {
-        errors.push("Open-Meteo: " + msg(err));
-      }
-
+      enrichMx(mxRows, mxCity, census);
       return {
         geo,
         rows: mxRows,
         city: mxCity,
-        live: { weather: wxLive },
-        fetchedAt: wxAt,
-        errors
+        census,
+        live: {},
+        errors: []
       };
     }
   };
@@ -145,6 +116,34 @@
       asr_sqm: +d.asr_sqm,
       asr_psf: +d.asr_psf
     };
+  }
+
+  const MX_CARPET_1BHK = 650;
+  const MX_CARPET_2BHK = 1000;
+  const MX_STAMP = 0.06;
+  const MX_ISLAND = { A: 1, B: 1, C: 1, D: 1, E: 1, "F/S": 1, "F/N": 1, "G/S": 1, "G/N": 1 };
+
+  function enrichMx(rows, city, census) {
+    const byId = (census && census.byId) || {};
+    const rentYr = city && city.rent_2bhk_inr ? city.rent_2bhk_inr * 12 : null;
+    const psfs = rows.map((r) => r.asr_psf).filter(Number.isFinite);
+    const med = d3.median(psfs);
+    const peak = d3.max(psfs);
+    const ranked = rows.slice().sort((a, b) => b.asr_psf - a.asr_psf);
+    ranked.forEach((r, i) => { r.asr_rank = i + 1; });
+    rows.forEach((r) => {
+      const c = byId[r.id] || {};
+      r.pop = c.pop;
+      r.households = c.households;
+      r.region = MX_ISLAND[r.id] ? "Island City" : "Suburbs";
+      r.floor_650 = Number.isFinite(r.asr_psf) ? r.asr_psf * MX_CARPET_1BHK : null;
+      r.floor_1000 = Number.isFinite(r.asr_psf) ? r.asr_psf * MX_CARPET_2BHK : null;
+      r.stamp_650 = r.floor_650 != null ? r.floor_650 * MX_STAMP : null;
+      r.vs_median = med ? 100 * r.asr_psf / med : null;
+      r.vs_peak = peak ? 100 * r.asr_psf / peak : null;
+      r.years_city_rent = (r.floor_1000 && rentYr) ? r.floor_1000 / rentYr : null;
+      r.hh_per_cr = (r.households && r.floor_650) ? r.households : null;
+    });
   }
 
   function parseZhvf(text) {
@@ -328,85 +327,6 @@
     return keys.length ? acs[keys[0]].release : null;
   }
 
-  async function loadMumbaiWeather(geo) {
-    const cached = readWxCache();
-    if (cached) return cached;
-    const cents = geo.features.map((f) => {
-      const c = d3.geoCentroid(f);
-      return { id: String(f.id), lon: c[0], lat: c[1] };
-    });
-    const lats = cents.map((c) => c.lat.toFixed(4)).join(",");
-    const lons = cents.map((c) => c.lon.toFixed(4)).join(",");
-    const wxUrl = "https://api.open-meteo.com/v1/forecast"
-      + "?latitude=" + lats
-      + "&longitude=" + lons
-      + "&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m"
-      + "&hourly=precipitation,temperature_2m"
-      + "&daily=precipitation_sum"
-      + "&forecast_days=2&timezone=Asia%2FKolkata";
-    const aqUrl = "https://air-quality-api.open-meteo.com/v1/air-quality"
-      + "?latitude=" + lats
-      + "&longitude=" + lons
-      + "&current=us_aqi,pm2_5,pm10"
-      + "&timezone=Asia%2FKolkata";
-    const [wxJson, aqJson] = await Promise.all([
-      fetch(wxUrl).then(okJson),
-      fetch(aqUrl).then(okJson)
-    ]);
-    const wxArr = asArr(wxJson);
-    const aqArr = asArr(aqJson);
-    const fetchedAt = new Date().toISOString();
-    const byId = {};
-    cents.forEach((c, i) => {
-      const w = wxArr[i] || {};
-      const a = aqArr[i] || {};
-      const cur = w.current || {};
-      const aq = a.current || {};
-      const daily = w.daily || {};
-      const hourly = w.hourly || {};
-      byId[c.id] = {
-        aqi: num(aq.us_aqi),
-        pm25: num(aq.pm2_5),
-        pm10: num(aq.pm10),
-        temp: num(cur.temperature_2m),
-        humidity: num(cur.relative_humidity_2m),
-        wind: num(cur.wind_speed_10m),
-        precipNow: num(cur.precipitation),
-        rain: daily.precipitation_sum ? num(daily.precipitation_sum[0]) : null,
-        tempSeries: seriesOf(hourly.time, hourly.temperature_2m),
-        rainSeries: seriesOf(hourly.time, hourly.precipitation),
-        fetchedAt
-      };
-    });
-    const payload = { byId, fetchedAt };
-    try { sessionStorage.setItem(WX_STORE, JSON.stringify({ at: Date.now(), payload })); } catch (e) {}
-    return payload;
-  }
-
-  function readWxCache() {
-    try {
-      const raw = sessionStorage.getItem(WX_STORE);
-      if (!raw) return null;
-      const wrap = JSON.parse(raw);
-      if (!wrap || Date.now() - wrap.at > WX_TTL) return null;
-      return wrap.payload;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function seriesOf(times, vals) {
-    if (!times || !vals) return [];
-    const out = [];
-    for (let i = 0; i < times.length; i++) {
-      const v = num(vals[i]);
-      if (v != null) out.push({ date: times[i], v });
-    }
-    return out;
-  }
-
-  function asArr(json) { return Array.isArray(json) ? json : [json]; }
-
   async function cachedText(url, ttl) {
     const now = Date.now();
     const m = readMeta();
@@ -431,11 +351,6 @@
 
   function readMeta() {
     try { return JSON.parse(localStorage.getItem(META_KEY) || "{}"); } catch (e) { return {}; }
-  }
-
-  async function okJson(res) {
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    return res.json();
   }
 
   function scale(v, asPercent) {
