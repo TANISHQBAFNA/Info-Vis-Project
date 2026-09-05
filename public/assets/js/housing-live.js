@@ -12,6 +12,7 @@
   const ZILLOW_FILES = {
     zhvi: "zhvi/County_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv",
     zori: "zori/County_zori_uc_sfrcondomfr_sm_month.csv",
+    zhvf: "zhvf_growth/Metro_zhvf_growth_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv",
     sale: "median_sale_price/County_median_sale_price_uc_sfrcondo_sm_month.csv",
     inv: "invt_fs/County_invt_fs_uc_sfrcondo_sm_month.csv",
     listings: "new_listings/County_new_listings_uc_sfrcondo_sm_month.csv",
@@ -59,7 +60,9 @@
       const settled = await Promise.allSettled(keys.map(async (key) => {
         say("Zillow " + key + "…");
         const text = await cachedText(ZILLOW_BASE + ZILLOW_FILES[key], ZILLOW_TTL);
-        const parsed = parseZillowVA(text, key === "cuts");
+        if (key === "zhvf") return { key, parsed: parseZhvf(text) };
+        const keep = (key === "zhvi" || key === "zori") ? 120 : 24;
+        const parsed = parseZillowVA(text, { asPercent: key === "cuts", keep });
         return { key, parsed };
       }));
       let zillowLive = false;
@@ -144,7 +147,33 @@
     };
   }
 
-  function parseZillowVA(text, asPercent) {
+  function parseZhvf(text) {
+    const rows = d3.csvParse(text);
+    const dateCols = rows.columns.filter((c) => /^\d{4}-\d{2}-\d{2}$/.test(c));
+    const yoyColName = dateCols[dateCols.length - 1];
+    const byKey = {};
+    rows.forEach((r) => {
+      const rec = {
+        name: r.RegionName,
+        base: r.BaseDate,
+        yoy: num(r[yoyColName]),
+        horizon: yoyColName
+      };
+      const city = metroCity(r.RegionName);
+      if (city) byKey[city] = rec;
+      if (r.RegionName) byKey[String(r.RegionName).toLowerCase()] = rec;
+    });
+    return { byKey, latest: yoyColName, monthCols: dateCols };
+  }
+
+  function metroCity(name) {
+    if (!name) return "";
+    return String(name).split(",")[0].split("-")[0].trim().toLowerCase();
+  }
+
+  function parseZillowVA(text, opts) {
+    const asPercent = !!(opts && opts.asPercent);
+    const keep = (opts && opts.keep) || 24;
     const rows = d3.csvParse(text);
     const monthCols = rows.columns.filter((c) => /^\d{4}-\d{2}-\d{2}$/.test(c));
     const latest = monthCols[monthCols.length - 1];
@@ -159,7 +188,7 @@
       const latestV = scale(num(r[latest]), asPercent);
       const prevV = prev ? scale(num(r[prev]), asPercent) : null;
       const series = [];
-      const start = Math.max(0, monthCols.length - 24);
+      const start = Math.max(0, monthCols.length - keep);
       for (let m = start; m < monthCols.length; m++) {
         const v = scale(num(r[monthCols[m]]), asPercent);
         if (v != null) series.push({ date: monthCols[m], v });
@@ -231,7 +260,8 @@
     const fbMap = {};
     (fallback || []).forEach((r) => { fbMap[r.fips] = r; });
     const hudMap = (hud && hud.byFips) || {};
-    const z = (key, fips) => zillow[key] && zillow[key].byFips[fips];
+    const z = (key, fips) => zillow[key] && zillow[key].byFips && zillow[key].byFips[fips];
+    const zhvf = (zillow.zhvf && zillow.zhvf.byKey) || {};
 
     return geo.features.map((f) => {
       const fips = String(f.id);
@@ -252,6 +282,10 @@
         zori: zo.latest,
         zoriSeries: zo.series || [],
         zoriVintage: zo.vintage,
+        years_rent: (zh.latest != null && zo.latest) ? zh.latest / (zo.latest * 12) : null,
+        zhvfYoy: (zhvf[metroCity(zh.metro)] || {}).yoy,
+        zhvfName: (zhvf[metroCity(zh.metro)] || {}).name,
+        zhvfHorizon: (zhvf[metroCity(zh.metro)] || {}).horizon,
         sale: pick(sa.latest, num(fb.median_sale)),
         saleVintage: sa.vintage,
         inv: (z("inv", fips) || {}).latest,

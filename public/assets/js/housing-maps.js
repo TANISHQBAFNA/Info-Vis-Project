@@ -30,6 +30,7 @@
     if (kind === "pm") return d3.format(".0f")(n) + " µg/m³";
     if (kind === "temp") return d3.format(".1f")(n) + "°C";
     if (kind === "rain") return d3.format(".1f")(n) + " mm";
+    if (kind === "years") return d3.format(".1f")(n) + " yr";
     return d3.format(",.0f")(n);
   }
 

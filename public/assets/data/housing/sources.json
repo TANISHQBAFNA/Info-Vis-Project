@@ -12,13 +12,14 @@
     "mumbai_nowcast": "open_meteo_weather_aqi",
     "mumbai_city_index": "rbi_hpi",
     "refresh": "browser_fetch_plus_yearly_overlays",
-    "refresh_note": "Zillow county CSVs and Census Reporter ACS are fetched in the browser (CORS *) and cached ~12h via Cache API. Open-Meteo weather/AQI cached 15 min in sessionStorage. HUD FMR, Redfin PPSF, IGR ASR stay as small committed files. No HUD/Census/FRED keys in client JS."
+    "refresh_note": "Zillow county CSVs, metro ZHVF (12-month growth), and Census Reporter ACS are fetched in the browser (CORS *) and cached ~12h via Cache API. Open-Meteo weather/AQI cached 15 min in sessionStorage. HUD FMR, Redfin PPSF, IGR ASR stay as small committed files. 5-year cones are trailing CAGR ± yearly volatility after Zillow's official 12-month metro forecast — not a priced 5-year model. No HUD/Census/FRED keys in client JS."
   },
   "live": {
     "zillow_cdn": "https://files.zillowstatic.com/research/public_csvs/",
     "zillow_series": [
       "zhvi",
       "zori",
+      "zhvf_growth_metro",
       "median_sale_price",
       "invt_fs",
       "new_listings",

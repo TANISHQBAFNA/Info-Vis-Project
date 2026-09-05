@@ -10,6 +10,7 @@
     va: [
       { id: "zhvi", label: "Typical home $", kind: "usd", group: "Price", live: true, hint: "Zillow ZHVI mid-tier, fetched live" },
       { id: "zhvi_yoy", label: "ZHVI YoY", kind: "yoy", group: "Price", live: true, hint: "Year-over-year change from the same ZHVI file" },
+      { id: "years_rent", label: "Years of rent to buy", kind: "years", group: "Price", live: true, hint: "ZHVI ÷ (ZORI × 12). How many years of typical rent equal the typical home." },
       { id: "ppsf", label: "Sale $ / sq ft", kind: "ppsf", group: "Price", live: false, hint: "Redfin closed-sale median PPSF — yearly overlay, file too big to fetch live" },
       { id: "sale", label: "Median sale $", kind: "usd", group: "Price", live: true, hint: "Zillow county median sale price" },
       { id: "inv", label: "For-sale inventory", kind: "count", group: "Market", live: true, hint: "Zillow for-sale inventory" },
@@ -121,7 +122,7 @@
       let t;
       window.addEventListener("resize", () => {
         clearTimeout(t);
-        t = setTimeout(() => this.drawMap(), 160);
+        t = setTimeout(() => { this.drawMap(); this.drawTime(); }, 160);
       });
     },
 
@@ -167,6 +168,7 @@
       this.renderKpis();
       this.renderAbout();
       this.drawMap();
+      this.drawTime();
       this.stamp();
       const search = document.getElementById("place-search");
       const sel = this.selected();
@@ -228,12 +230,31 @@
       const m = this.metricDef();
       if (stamp) stamp.textContent = m.hint;
       const fmt = global.HousingMaps.fmt;
-      const spark = global.HousingMaps.spark;
       if (this.place === "va") {
-        const zhSpark = spark(w.zhviSeries);
-        const zoSpark = spark(w.zoriSeries);
+        const homeP = global.HousingPath && HousingPath.project(w.zhviSeries, { officialYoy: w.zhvfYoy, years: 5 });
+        const rentP = global.HousingPath && HousingPath.project(w.zoriSeries, { years: 5 });
+        const agoHome = homeP && homeP.ago;
+        const agoRent = rentP && rentP.ago;
+        const y5h = homeP && homeP.y5;
+        const y5r = rentP && rentP.y5;
+        const agoYears = (agoHome && agoRent) ? agoHome.v / (agoRent.v * 12) : null;
         feed.innerHTML =
-          `<p class="intel-lede">FIPS ${esc(w.fips)}${w.metro ? " · " + esc(w.metro) : ""}. Green dots on chips are live CDN fetches. HUD FMR and $/ft² stay yearly overlays.</p>
+          `<p class="intel-lede">FIPS ${esc(w.fips)}${w.metro ? " · " + esc(w.metro) : ""}. Green dots on chips are live CDN fetches. Path below is 10 years of ZHVI×ZORI, not another map.</p>
+           <h3 class="feed-h">10 years → now → +5y cone</h3>
+           <div class="stat-grid">
+             ${stat("Home 10y ago", fmt(agoHome && agoHome.v, "usd"), agoHome && agoHome.date)}
+             ${stat("Home now", fmt(w.zhvi, "usd"), w.zhviVintage)}
+             ${stat("Home +5y trend", fmt(y5h && y5h.mid, "usd"), homeP ? (d3.format("+.1%")(homeP.cagr) + " CAGR") : "")}
+             ${stat("Rent 10y ago", fmt(agoRent && agoRent.v, "rent"), agoRent && agoRent.date)}
+             ${stat("Rent now", fmt(w.zori, "rent"), w.zoriVintage)}
+             ${stat("Rent +5y trend", fmt(y5r && y5r.mid, "rent"), rentP ? (d3.format("+.1%")(rentP.cagr) + " CAGR") : "")}
+             ${stat("Years of rent then", fmt(agoYears, "years"))}
+             ${stat("Years of rent now", fmt(w.years_rent, "years"), "ZHVI ÷ (ZORI×12)")}
+             ${stat("Zillow metro Y1", Number.isFinite(w.zhvfYoy) ? d3.format("+.1f")(w.zhvfYoy) + "%" : "—", w.zhvfName || "no MSA forecast")}
+           </div>
+           <p class="intel-body">${homeP && Number.isFinite(homeP.officialYoy)
+             ? "Year 1 of the home cone uses Zillow’s metro forecast (" + esc(w.zhvfName || "MSA") + "). Years 2–5 and all rent years are a trailing CAGR cone ±1σ of yearly returns — a trend extension, not a priced model. Nobody publishes a 5-year county forecast."
+             : "No Zillow metro forecast for this county. Cone is trailing CAGR ±1σ of yearly returns. Not a model."}</p>
            <h3 class="feed-h">Price</h3>
            <div class="stat-grid">
              ${stat("Typical home (ZHVI)", fmt(w.zhvi, "usd"), w.zhviVintage)}
@@ -241,7 +262,6 @@
              ${stat("Sale $ / sq ft", fmt(w.ppsf, "ppsf"), w.ppsfVintage || "Redfin snapshot")}
              ${stat("Median sale", fmt(w.sale, "usd"), w.saleVintage || "Zillow")}
            </div>
-           ${zhSpark ? `<p class="spark-label">ZHVI, last 24 months</p>${zhSpark}` : ""}
            <h3 class="feed-h">Market</h3>
            <div class="stat-grid">
              ${stat("Inventory", fmt(w.inv, "count"))}
@@ -263,7 +283,6 @@
              ${stat("Owner-occupied", fmt(w.owner_pct, "pct"))}
              ${stat("Rent ≥50% income", fmt(w.burden50_pct, "pct"))}
            </div>
-           ${zoSpark ? `<p class="spark-label">ZORI rent, last 24 months</p>${zoSpark}` : ""}
            <p class="intel-body">HUD FMR is a bedroom rent, not per square foot. Many Northern Virginia counties share the Washington HMFA 2BR, so that layer looks flat on purpose. Closed-sale $/ft² has no Zillow county replacement (ZHVI PSF discontinued); Redfin’s county file is ~230 MB and cannot run in the browser.</p>
            <p class="combo-meta">${this.liveNoteVa()}</p>`;
       } else {
@@ -351,6 +370,41 @@
       }
     },
 
+    drawTime() {
+      const title = document.getElementById("time-title");
+      const hint = document.getElementById("time-hint");
+      const tip = (event, html) => this.tip(html, event && event.clientX, event && event.clientY);
+      if (!global.HousingPath) return;
+      if (this.place === "va") {
+        const w = this.selected();
+        if (title) title.textContent = (w ? w.name : "County") + " · 10-year walk and 5-year cone";
+        if (hint) {
+          hint.textContent = Number.isFinite(w && w.zhvfYoy)
+            ? "Left: rent×price path (iso-yield diagonals). Right: index 10y ago = 100. Dashed = trend; Y1 home uses Zillow metro forecast."
+            : "Left: rent×price path. Right: index 10y ago = 100. Cone is CAGR ± yearly volatility. Not a 5-year official forecast.";
+        }
+        try {
+          HousingPath.drawWalk({ row: w, rows: this.rows(), tip });
+          HousingPath.drawFan({ row: w });
+        } catch (err) {
+          console.warn("time fail", err);
+        }
+      } else {
+        if (title) title.textContent = "Mumbai · pay vs air (no 10-year ward series)";
+        if (hint) hint.textContent = "IGR ASR has no locality time series. Scatter is yearly ₹/ft² vs live AQI — a different cut, not a fake history.";
+        try {
+          HousingPath.drawMxNow({
+            rows: this.rows(),
+            selectedId: this.selectedId,
+            onSelect: (id) => this.select(id),
+            tip
+          });
+        } catch (err) {
+          console.warn("mx time fail", err);
+        }
+      }
+    },
+
     stamp() {
       const el = document.getElementById("live-stamp");
       const tick = document.getElementById("ticker-line");
@@ -359,7 +413,7 @@
         if (el) el.textContent = live ? "Zillow + ACS live" : "snapshot fallback";
         if (tick) {
           tick.textContent = live
-            ? "Browser fetches Zillow county CSVs and Census Reporter ACS. Cache API holds them ~12h. HUD FMR and Redfin $/ft² stay yearly — no CORS file small enough for PPSF."
+            ? "10y ZHVI×ZORI walk + 5y cone (Zillow metro Y1, then CAGR). HUD FMR and Redfin $/ft² stay yearly overlays."
             : "Live Zillow fetch failed; showing committed fallback where needed. " + ((this.va && this.va.errors) || []).join("; ");
         }
       } else {
