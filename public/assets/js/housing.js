@@ -1,5 +1,5 @@
 /**
- * Dual-place housing dashboard. Reads committed snapshots only.
+ * Dual-place housing dashboard. Zillow + Census + Open-Meteo at runtime.
  */
 (function (global) {
   "use strict";
@@ -8,45 +8,52 @@
 
   const METRICS = {
     va: [
-      { id: "ppsf", label: "Sale $ / sq ft", kind: "ppsf", hint: "Redfin closed-sale median PPSF" },
-      { id: "zhvi", label: "Typical home $", kind: "usd", hint: "Zillow ZHVI, mid-tier" },
-      { id: "fmr_2br", label: "2BR FMR / mo", kind: "rent", hint: "HUD FY2026 Fair Market Rent" },
-      { id: "acs_median_rent", label: "ACS rent / mo", kind: "rent", hint: "Census ACS median gross rent" }
+      { id: "zhvi", label: "Typical home $", kind: "usd", group: "Price", live: true, hint: "Zillow ZHVI mid-tier, fetched live" },
+      { id: "zhvi_yoy", label: "ZHVI YoY", kind: "yoy", group: "Price", live: true, hint: "Year-over-year change from the same ZHVI file" },
+      { id: "ppsf", label: "Sale $ / sq ft", kind: "ppsf", group: "Price", live: false, hint: "Redfin closed-sale median PPSF — yearly overlay, file too big to fetch live" },
+      { id: "sale", label: "Median sale $", kind: "usd", group: "Price", live: true, hint: "Zillow county median sale price" },
+      { id: "inv", label: "For-sale inventory", kind: "count", group: "Market", live: true, hint: "Zillow for-sale inventory" },
+      { id: "listings", label: "New listings", kind: "count", group: "Market", live: true, hint: "Zillow new listings" },
+      { id: "cuts", label: "% price cuts", kind: "pct", group: "Market", live: true, hint: "Share of listings with a price cut" },
+      { id: "doz", label: "Days to pending", kind: "days", group: "Market", live: true, hint: "Zillow mean days to pending" },
+      { id: "heat", label: "Market heat", kind: "heat", group: "Market", live: true, hint: "Zillow market heat index (0–100)" },
+      { id: "zori", label: "ZORI rent / mo", kind: "rent", group: "Rent", live: true, hint: "Zillow Observed Rent Index" },
+      { id: "fmr_2br", label: "HUD 2BR FMR", kind: "rent", group: "Rent", live: false, hint: "HUD FY2026 Fair Market Rent, 2-bedroom. Annual. HUD USER xlsx is blocked." },
+      { id: "acs_rent", label: "ACS rent / mo", kind: "rent", group: "Rent", live: true, hint: "Census ACS median gross rent via Census Reporter" }
     ],
     mumbai: [
-      { id: "asr_psf", label: "ASR ₹ / sq ft", kind: "inr", hint: "IGR ready reckoner midpoint, carpet-equivalent ₹/sq ft" }
+      { id: "asr_psf", label: "ASR ₹ / sq ft", kind: "inr", group: "Price", live: false, hint: "IGR ready reckoner midpoint — no public JSON API" },
+      { id: "aqi", label: "US AQI now", kind: "aqi", group: "Now", live: true, hint: "Open-Meteo air quality at ward centroid" },
+      { id: "pm25", label: "PM2.5", kind: "pm", group: "Now", live: true, hint: "Open-Meteo PM2.5 µg/m³" },
+      { id: "temp", label: "Temp now", kind: "temp", group: "Now", live: true, hint: "Open-Meteo temperature at ward centroid" },
+      { id: "rain", label: "Rain today", kind: "rain", group: "Now", live: true, hint: "Open-Meteo daily precipitation sum, Asia/Kolkata" }
     ]
   };
 
   const HousingDash = {
     place: "va",
-    metric: "ppsf",
+    metric: "zhvi",
     selectedId: DEFAULTS.va,
     sources: null,
-    vaRows: [],
-    vaGeo: null,
-    mxRows: [],
-    mxGeo: null,
-    mxCity: null,
+    va: null,
+    mx: null,
 
     boot() {
       const log = document.getElementById("boot-log");
       const screen = document.getElementById("boot-screen");
       const line = (t) => { if (log) log.textContent = t; };
+      if (!global.HousingLive) {
+        line("housing-live.js missing");
+        return;
+      }
       Promise.all([
         d3.json("assets/data/housing/sources.json"),
-        d3.csv("assets/data/housing/va-housing.csv", parseVa),
-        d3.json("assets/data/housing/va-counties.geojson"),
-        d3.csv("assets/data/housing/mumbai-wards.csv", parseMx),
-        d3.json("assets/data/housing/mumbai-wards.geojson"),
-        d3.json("assets/data/housing/mumbai-city.json")
-      ]).then(([sources, vaRows, vaGeo, mxRows, mxGeo, mxCity]) => {
+        HousingLive.loadVirginia(line),
+        HousingLive.loadMumbai(line)
+      ]).then(([sources, va, mx]) => {
         this.sources = sources;
-        this.vaRows = vaRows;
-        this.vaGeo = vaGeo;
-        this.mxRows = mxRows;
-        this.mxGeo = mxGeo;
-        this.mxCity = mxCity;
+        this.va = va;
+        this.mx = mx;
         try { this.mount(); }
         catch (err) {
           console.error("mount fail", err);
@@ -54,7 +61,7 @@
           if (dash) dash.hidden = false;
         }
         if (screen) screen.classList.add("is-done");
-      }).catch(err => {
+      }).catch((err) => {
         console.error(err);
         line("Could not load data — " + (err && err.message ? err.message : err));
       });
@@ -67,15 +74,16 @@
       this.render();
     },
 
-    rows() { return this.place === "va" ? this.vaRows : this.mxRows; },
-    geo() { return this.place === "va" ? this.vaGeo : this.mxGeo; },
+    pack() { return this.place === "va" ? this.va : this.mx; },
+    rows() { return (this.pack() && this.pack().rows) || []; },
+    geo() { return this.pack() && this.pack().geo; },
     idKey() { return this.place === "va" ? "fips" : "id"; },
     selected() {
       const key = this.idKey();
-      return this.rows().find(r => String(r[key]) === String(this.selectedId)) || this.rows()[0];
+      return this.rows().find((r) => String(r[key]) === String(this.selectedId)) || this.rows()[0];
     },
     metricDef() {
-      return METRICS[this.place].find(m => m.id === this.metric) || METRICS[this.place][0];
+      return METRICS[this.place].find((m) => m.id === this.metric) || METRICS[this.place][0];
     },
 
     setPlace(place) {
@@ -87,7 +95,7 @@
     },
 
     setMetric(id) {
-      if (!METRICS[this.place].some(m => m.id === id)) return;
+      if (!METRICS[this.place].some((m) => m.id === id)) return;
       this.metric = id;
       this.render();
     },
@@ -95,13 +103,13 @@
     select(id) {
       if (!id) return;
       const key = this.idKey();
-      if (!this.rows().some(r => String(r[key]) === String(id))) return;
+      if (!this.rows().some((r) => String(r[key]) === String(id))) return;
       this.selectedId = id;
       this.render();
     },
 
     bind() {
-      document.querySelectorAll("[data-place]").forEach(btn => {
+      document.querySelectorAll("[data-place]").forEach((btn) => {
         btn.addEventListener("click", () => this.setPlace(btn.getAttribute("data-place")));
       });
       const reset = document.getElementById("btn-reset");
@@ -125,12 +133,13 @@
       const open = (q) => {
         const s = (q || "").trim().toLowerCase();
         const key = this.idKey();
-        const hits = this.rows().filter(r =>
+        const hits = this.rows().filter((r) =>
           !s || String(r.name).toLowerCase().includes(s) ||
           String(r.places || "").toLowerCase().includes(s) ||
+          String(r.metro || "").toLowerCase().includes(s) ||
           String(r[key]).toLowerCase() === s
         ).slice(0, 12);
-        list.innerHTML = hits.map(r =>
+        list.innerHTML = hits.map((r) =>
           `<button type="button" data-id="${esc(r[key])}"><strong>${esc(r.name)}</strong></button>`
         ).join("");
         list.hidden = !hits.length;
@@ -149,7 +158,7 @@
     },
 
     render() {
-      document.querySelectorAll("[data-place]").forEach(btn => {
+      document.querySelectorAll("[data-place]").forEach((btn) => {
         const on = btn.getAttribute("data-place") === this.place;
         btn.setAttribute("aria-pressed", on ? "true" : "false");
         btn.classList.toggle("is-active", on);
@@ -167,10 +176,18 @@
     renderMetrics() {
       const row = document.getElementById("metric-row");
       if (!row) return;
-      row.innerHTML = METRICS[this.place].map(m =>
-        `<button type="button" class="chip${m.id === this.metric ? " is-active" : ""}" data-metric="${m.id}">${esc(m.label)}</button>`
+      const groups = [];
+      METRICS[this.place].forEach((m) => {
+        let g = groups.find((x) => x.name === m.group);
+        if (!g) { g = { name: m.group, items: [] }; groups.push(g); }
+        g.items.push(m);
+      });
+      row.innerHTML = groups.map((g) =>
+        `<div class="metric-group"><span class="metric-group-label">${esc(g.name)}</span>${g.items.map((m) =>
+          `<button type="button" class="chip${m.id === this.metric ? " is-active" : ""}" data-metric="${m.id}">${esc(m.label)}${m.live ? '<i class="live-dot" title="Live fetch"></i>' : ""}</button>`
+        ).join("")}</div>`
       ).join("");
-      row.querySelectorAll("[data-metric]").forEach(btn => {
+      row.querySelectorAll("[data-metric]").forEach((btn) => {
         btn.addEventListener("click", () => this.setMetric(btn.getAttribute("data-metric")));
       });
     },
@@ -180,8 +197,8 @@
       if (!row) return;
       const m = this.metricDef();
       const rows = this.rows();
-      const vals = rows.map(r => +r[m.id]).filter(Number.isFinite);
-      const max = rows.slice().sort((a, b) => (+b[m.id] || -1) - (+a[m.id] || -1))[0];
+      const vals = rows.map((r) => +r[m.id]).filter(Number.isFinite);
+      const max = rows.slice().sort((a, b) => (+b[m.id] || -1e12) - (+a[m.id] || -1e12))[0];
       const min = rows.slice().sort((a, b) => (+a[m.id] || 1e12) - (+b[m.id] || 1e12))[0];
       const med = d3.median(vals);
       const fmt = (v) => global.HousingMaps.fmt(v, m.kind);
@@ -191,9 +208,12 @@
         kpi("MEDIAN", fmt(med), m.label),
         kpi("LOWEST", fmt(min && min[m.id]), min ? min.name : "—")
       ];
-      if (this.place === "mumbai" && this.mxCity) {
-        cards.push(kpi("RBI HPI", this.mxCity.rbi_hpi_all_india, this.mxCity.rbi_hpi_quarter + " all-India"));
-        cards.push(kpi("2BHK RENT", "₹" + d3.format(",")(this.mxCity.rent_2bhk_inr), "city, not mapped"));
+      if (this.place === "mumbai" && this.mx && this.mx.city) {
+        cards.push(kpi("RBI HPI", this.mx.city.rbi_hpi_all_india, this.mx.city.rbi_hpi_quarter + " all-India"));
+        cards.push(kpi("2BHK RENT", "₹" + d3.format(",")(this.mx.city.rent_2bhk_inr), "city, not mapped"));
+      }
+      if (this.place === "va" && this.va && this.va.live) {
+        cards.push(kpi("FEED", this.va.live.zillow ? "LIVE" : "FALLBACK", this.va.live.census ? "Zillow + ACS" : "Zillow"));
       }
       row.innerHTML = cards.join("");
     },
@@ -208,30 +228,95 @@
       const m = this.metricDef();
       if (stamp) stamp.textContent = m.hint;
       const fmt = global.HousingMaps.fmt;
+      const spark = global.HousingMaps.spark;
       if (this.place === "va") {
+        const zhSpark = spark(w.zhviSeries);
+        const zoSpark = spark(w.zoriSeries);
         feed.innerHTML =
-          `<p class="intel-lede">FIPS ${esc(w.fips)}. Values are index snapshots, not a live listing feed.</p>
+          `<p class="intel-lede">FIPS ${esc(w.fips)}${w.metro ? " · " + esc(w.metro) : ""}. Green dots on chips are live CDN fetches. HUD FMR and $/ft² stay yearly overlays.</p>
+           <h3 class="feed-h">Price</h3>
            <div class="stat-grid">
-             <div class="stat-card"><span>Sale $ / sq ft</span><strong>${fmt(w.ppsf, "ppsf")}</strong></div>
-             <div class="stat-card"><span>Typical home (ZHVI)</span><strong>${fmt(w.zhvi, "usd")}</strong></div>
-             <div class="stat-card"><span>HUD 2BR FMR</span><strong>${fmt(w.fmr_2br, "rent")}</strong></div>
-             <div class="stat-card"><span>ACS median rent</span><strong>${fmt(w.acs_median_rent, "rent")}</strong></div>
-             <div class="stat-card"><span>Redfin median sale</span><strong>${fmt(w.median_sale, "usd")}</strong></div>
-             <div class="stat-card"><span>ACS median value</span><strong>${fmt(w.acs_median_value, "usd")}</strong></div>
+             ${stat("Typical home (ZHVI)", fmt(w.zhvi, "usd"), w.zhviVintage)}
+             ${stat("ZHVI YoY", fmt(w.zhvi_yoy, "yoy"), "same file")}
+             ${stat("Sale $ / sq ft", fmt(w.ppsf, "ppsf"), w.ppsfVintage || "Redfin snapshot")}
+             ${stat("Median sale", fmt(w.sale, "usd"), w.saleVintage || "Zillow")}
            </div>
-           <p class="intel-body">HUD FMR is a bedroom rent, not per square foot — the US government does not publish county rent PSF. Many Northern Virginia counties share the Washington HMFA 2BR of $2,246, so that layer looks flat on purpose.</p>
-           <p class="combo-meta">ZHVI ${esc(this.sources.vintages.zhvi)} · Redfin ${esc(this.sources.vintages.redfin_ppsf)} · HUD ${esc(this.sources.vintages.hud_fmr)} · ${esc(this.sources.vintages.acs)}</p>`;
+           ${zhSpark ? `<p class="spark-label">ZHVI, last 24 months</p>${zhSpark}` : ""}
+           <h3 class="feed-h">Market</h3>
+           <div class="stat-grid">
+             ${stat("Inventory", fmt(w.inv, "count"))}
+             ${stat("New listings", fmt(w.listings, "count"))}
+             ${stat("% price cuts", fmt(w.cuts, "pct"))}
+             ${stat("Days to pending", fmt(w.doz, "days"))}
+             ${stat("Market heat", fmt(w.heat, "heat"))}
+           </div>
+           <h3 class="feed-h">Rent &amp; ACS</h3>
+           <div class="stat-grid">
+             ${stat("ZORI rent", fmt(w.zori, "rent"), w.zoriVintage)}
+             ${stat("HUD 2BR FMR", fmt(w.fmr_2br, "rent"), this.va.hudVintage)}
+             ${stat("ACS median rent", fmt(w.acs_rent, "rent"))}
+             ${stat("ACS 2BR rent", fmt(w.acs_2br, "rent"))}
+             ${stat("ACS median value", fmt(w.acs_value, "usd"))}
+             ${stat("Population", fmt(w.acs_pop, "count"))}
+             ${stat("Housing units", fmt(w.units, "count"))}
+             ${stat("Vacant", fmt(w.vacant_pct, "pct"))}
+             ${stat("Owner-occupied", fmt(w.owner_pct, "pct"))}
+             ${stat("Rent ≥50% income", fmt(w.burden50_pct, "pct"))}
+           </div>
+           ${zoSpark ? `<p class="spark-label">ZORI rent, last 24 months</p>${zoSpark}` : ""}
+           <p class="intel-body">HUD FMR is a bedroom rent, not per square foot. Many Northern Virginia counties share the Washington HMFA 2BR, so that layer looks flat on purpose. Closed-sale $/ft² has no Zillow county replacement (ZHVI PSF discontinued); Redfin’s county file is ~230 MB and cannot run in the browser.</p>
+           <p class="combo-meta">${this.liveNoteVa()}</p>`;
       } else {
+        const city = this.mx && this.mx.city;
+        const tSpark = spark(w.tempSeries);
+        const rSpark = spark(w.rainSeries);
         feed.innerHTML =
-          `<p class="intel-lede">${esc(w.places)} · BMC ward ${esc(w.id)}</p>
+          `<p class="intel-lede">${esc(w.places)} · BMC ward ${esc(w.id)}. ASR is the stamp-duty floor. Weather and AQI are live at the ward centroid.</p>
+           <h3 class="feed-h">Official price floor</h3>
            <div class="stat-grid">
-             <div class="stat-card"><span>ASR ₹ / sq ft</span><strong>${fmt(w.asr_psf, "inr")}</strong></div>
-             <div class="stat-card"><span>ASR ₹ / sq m</span><strong>₹${d3.format(",")(+w.asr_sqm)}</strong></div>
+             ${stat("ASR ₹ / sq ft", fmt(w.asr_psf, "inr"), city && city.asr_vintage)}
+             ${stat("ASR ₹ / sq m", "₹" + d3.format(",")(+w.asr_sqm), "IGR ready reckoner")}
            </div>
-           <p class="intel-body">Ready reckoner is the stamp-duty floor, usually below transacted price. Midpoint of published residential zone rates, mapped onto the 24 BMC wards because that is the polygon set we can draw. Residex locality ₹/sq ft has no public API.</p>
-           <p class="intel-body">Locality rent PSF does not exist as an official series. City 2BHK rent ₹${d3.format(",")(this.mxCity.rent_2bhk_inr)} is a Magicbricks index, shown only as a KPI.</p>
-           <p class="combo-meta">${esc(this.mxCity.asr_vintage)}. RBI HPI all-India ${this.mxCity.rbi_hpi_all_india} (${esc(this.mxCity.rbi_hpi_quarter)}, base ${esc(this.mxCity.rbi_hpi_base)}).</p>`;
+           <h3 class="feed-h">Now at this ward</h3>
+           <div class="stat-grid">
+             ${stat("US AQI", fmt(w.aqi, "aqi"))}
+             ${stat("PM2.5", fmt(w.pm25, "pm"))}
+             ${stat("PM10", fmt(w.pm10, "pm"))}
+             ${stat("Temperature", fmt(w.temp, "temp"))}
+             ${stat("Humidity", Number.isFinite(w.humidity) ? d3.format(".0f")(w.humidity) + "%" : "—")}
+             ${stat("Wind", Number.isFinite(w.wind) ? d3.format(".1f")(w.wind) + " km/h" : "—")}
+             ${stat("Rain today", fmt(w.rain, "rain"))}
+             ${stat("Precip now", fmt(w.precipNow, "rain"))}
+           </div>
+           ${tSpark ? `<p class="spark-label">Temperature, next 48h</p>${tSpark}` : ""}
+           ${rSpark ? `<p class="spark-label">Precipitation, next 48h</p>${rSpark}` : ""}
+           <p class="intel-body">Ready reckoner is usually below transacted price. Mapped onto 24 BMC wards because that is the polygon set we can draw. Residex locality ₹/ft² and Magicbricks listings have no CORS JSON API — not scraped. City 2BHK rent is a named research KPI, not a ward layer.</p>
+           <p class="combo-meta">${this.liveNoteMx()}</p>`;
       }
+    },
+
+    liveNoteVa() {
+      const v = this.va || {};
+      const z = v.vintages || {};
+      const bits = [];
+      bits.push(v.live && v.live.zillow ? "Zillow live ZHVI " + (z.zhvi || "") : "Zillow fallback");
+      bits.push(v.live && v.live.census ? "ACS live " + (v.acsRelease || "") : "ACS snapshot");
+      bits.push("HUD " + (v.hudVintage || "FY2026"));
+      bits.push("Redfin PPSF overlay");
+      if (v.errors && v.errors.length) bits.push("errors: " + v.errors.join("; "));
+      return bits.join(" · ");
+    },
+
+    liveNoteMx() {
+      const mx = this.mx || {};
+      const city = mx.city || {};
+      const bits = [];
+      bits.push(mx.live && mx.live.weather ? "Open-Meteo live" : "weather unavailable");
+      if (mx.fetchedAt) bits.push("wx " + mx.fetchedAt.replace("T", " ").slice(0, 16) + "Z");
+      bits.push(city.asr_vintage || "ASR");
+      bits.push("RBI HPI " + (city.rbi_hpi_all_india || "") + " " + (city.rbi_hpi_quarter || ""));
+      if (mx.errors && mx.errors.length) bits.push("errors: " + mx.errors.join("; "));
+      return bits.join(" · ");
     },
 
     drawMap() {
@@ -245,14 +330,14 @@
       }
       if (hint) {
         hint.textContent = this.place === "va"
-          ? "Each shape is a county or independent city"
-          : "Each shape is a BMC administrative ward";
+          ? (m.live ? "Live Zillow / Census · each shape is a county or independent city" : "Yearly overlay · each shape is a county or independent city")
+          : (m.live ? "Live Open-Meteo at ward centroid" : "Each shape is a BMC administrative ward");
       }
-      if (!global.HousingMaps) return;
+      if (!global.HousingMaps || !this.geo()) return;
       try {
         HousingMaps.draw({
           geo: this.geo(),
-          rows: this.rows().map(r => Object.assign({}, r, { label: r.name })),
+          rows: this.rows().map((r) => Object.assign({}, r, { label: r.name })),
           idKey: this.idKey(),
           metric: m.id,
           kind: m.kind,
@@ -269,16 +354,22 @@
     stamp() {
       const el = document.getElementById("live-stamp");
       const tick = document.getElementById("ticker-line");
-      const v = this.sources && this.sources.vintages || {};
-      if (el) {
-        el.textContent = this.place === "va"
-          ? "ZHVI " + (v.zhvi || "") + " · PPSF " + (v.redfin_ppsf || "")
-          : (v.mumbai_asr || "ASR");
-      }
-      if (tick) {
-        tick.textContent = this.place === "va"
-          ? "Redfin closed-sale $ / sq ft, Zillow ZHVI, HUD FY2026 2BR FMR, ACS 5-year rent. Not listings."
-          : "IGR ASR ₹ / sq ft on BMC wards. RBI HPI is city/all-India. Rent is city-only (Magicbricks).";
+      if (this.place === "va") {
+        const live = this.va && this.va.live && this.va.live.zillow;
+        if (el) el.textContent = live ? "Zillow + ACS live" : "snapshot fallback";
+        if (tick) {
+          tick.textContent = live
+            ? "Browser fetches Zillow county CSVs and Census Reporter ACS. Cache API holds them ~12h. HUD FMR and Redfin $/ft² stay yearly — no CORS file small enough for PPSF."
+            : "Live Zillow fetch failed; showing committed fallback where needed. " + ((this.va && this.va.errors) || []).join("; ");
+        }
+      } else {
+        const live = this.mx && this.mx.live && this.mx.live.weather;
+        if (el) el.textContent = live ? "Open-Meteo live" : "ASR only";
+        if (tick) {
+          tick.textContent = live
+            ? "IGR ASR ₹/ft² is the official yearly floor (no JSON API). AQI, PM, rain, temp fetch from Open-Meteo at each ward centroid every 15 minutes."
+            : "Open-Meteo blocked or failed. ASR snapshot still mapped. " + ((this.mx && this.mx.errors) || []).join("; ");
+        }
       }
     },
 
@@ -297,26 +388,8 @@
     }
   };
 
-  function parseVa(d) {
-    return {
-      fips: d.fips,
-      name: d.name,
-      zhvi: +d.zhvi,
-      ppsf: +d.ppsf,
-      median_sale: +d.median_sale,
-      fmr_2br: +d.fmr_2br,
-      acs_median_rent: +d.acs_median_rent,
-      acs_median_value: +d.acs_median_value
-    };
-  }
-  function parseMx(d) {
-    return {
-      id: d.id,
-      name: d.name,
-      places: d.places,
-      asr_sqm: +d.asr_sqm,
-      asr_psf: +d.asr_psf
-    };
+  function stat(label, value, note) {
+    return `<div class="stat-card"><span>${esc(label)}</span><strong>${value}</strong>${note ? `<em>${esc(note)}</em>` : ""}</div>`;
   }
   function kpi(k, v, s) {
     return `<article class="kpi"><span class="kpi-label">${esc(k)}</span><span class="kpi-value">${v}</span><span class="kpi-sub">${esc(s)}</span></article>`;

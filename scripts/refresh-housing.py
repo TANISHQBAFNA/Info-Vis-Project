@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Build committed housing snapshots for the static dashboard.
+"""Rebuild yearly overlays the browser cannot fetch live.
 
-Locks (see public/assets/data/housing/sources.json):
-  VA PSF  = Redfin closed-sale median PPSF (All Residential)
-  VA sale = Zillow ZHVI county
-  VA rent = HUD FY2026 2BR FMR from the official PDF schedule
+Live path (housing-live.js) fetches Zillow county CSVs + Census Reporter ACS
+at runtime. This script only refreshes files with no small CORS API:
+  VA PPSF = Redfin closed-sale median PPSF (~230 MB tracker → tiny CSV)
+  VA FMR  = HUD FY2026 2BR schedule JSON
   Mumbai  = BMC 24-ward GeoJSON + compiled IGR ASR midpoint ₹/sq ft
-  Refresh = snapshot in repo, no client keys
+va-housing.csv remains a ZHVI/ACS fallback if the live fetch fails.
 """
 from __future__ import annotations
 
@@ -190,6 +190,25 @@ def write_va(zhvi_rows, zhvi_month, redfin, redfin_month, acs, acs_release):
         w = csv.DictWriter(f, fieldnames=list(out_rows[0].keys()))
         w.writeheader()
         w.writerows(out_rows)
+
+    ppsf_path = OUT / "va-ppsf.csv"
+    with ppsf_path.open("w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=["fips", "name", "ppsf", "vintage"])
+        w.writeheader()
+        for row in out_rows:
+            w.writerow({
+                "fips": row["fips"],
+                "name": row["name"],
+                "ppsf": row["ppsf"],
+                "vintage": redfin_month,
+            })
+
+    (OUT / "hud-fmr.json").write_text(json.dumps({
+        "vintage": "FY2026",
+        "unit": "usd_per_month_2br",
+        "note": "HUD Fair Market Rent 2-bedroom. HUD USER xlsx is WAF-blocked; compiled from the official PDF schedule.",
+        "byFips": HUD_FMR_2BR,
+    }, indent=2) + "\n")
 
     geo = json.loads((TMP / "us-counties.geojson").read_text())
     keep = {r["fips"] for r in zhvi_rows}

@@ -1,31 +1,57 @@
 {
   "locked": {
-    "va_psf": "redfin_median_ppsf",
-    "va_psf_note": "Closed-sale median price per sq ft from Redfin county market tracker. No API key. Asking-price FRED/Realtor.com series not used.",
-    "va_sale_level": "zillow_zhvi_county",
-    "va_rent": "hud_fmr_2br",
-    "va_rent_note": "Official HUD Fair Market Rent, 2-bedroom, FY2026. Dollars per month, not per sq ft. Census ACS skipped because the API requires a key.",
+    "va_psf": "redfin_median_ppsf_overlay",
+    "va_psf_note": "Closed-sale median price per sq ft from Redfin county market tracker. The full county file is ~230 MB gzipped, so it cannot be fetched in-browser. Tiny committed overlay only. ZHVI per-sq-ft was discontinued.",
+    "va_sale_level": "zillow_zhvi_county_live",
+    "va_rent": "zillow_zori_live_plus_hud_fmr_yearly",
+    "va_rent_note": "ZORI (observed rent) is fetched live from Zillow CDN. HUD FY2026 2BR FMR is an annual overlay because HUD USER xlsx is WAF-blocked.",
     "mumbai_sale": "igr_asr_ward_midpoint",
-    "mumbai_sale_note": "IGR Maharashtra Annual Statement of Rates (ready reckoner) FY 2025-26 / frozen FY 2026-27, compiled to 24 BMC wards as the midpoint of published residential \u20b9/sq m ranges, converted to \u20b9/sq ft. Residex has no public API. Ward GeoJSON is the grain we can draw.",
+    "mumbai_sale_note": "IGR Maharashtra Annual Statement of Rates (ready reckoner) FY 2025-26 / frozen FY 2026-27, compiled to 24 BMC wards. No public JSON API.",
     "mumbai_rent": "city_only_omit_locality",
-    "mumbai_rent_note": "No official locality rent \u20b9/sq ft. City KPI uses Magicbricks Mumbai Rent Index 2BHK average as a named research exception. Not mapped onto wards.",
+    "mumbai_rent_note": "No official locality rent ₹/sq ft. City KPI uses Magicbricks Mumbai Rent Index 2BHK average as a named research exception. Not mapped onto wards.",
+    "mumbai_nowcast": "open_meteo_weather_aqi",
     "mumbai_city_index": "rbi_hpi",
-    "refresh": "snapshot_in_repo",
-    "refresh_note": "Static Firebase site. No HUD/Census/FRED keys in client JS. Re-run scripts/refresh-housing.py when vintages change."
+    "refresh": "browser_fetch_plus_yearly_overlays",
+    "refresh_note": "Zillow county CSVs and Census Reporter ACS are fetched in the browser (CORS *) and cached ~12h via Cache API. Open-Meteo weather/AQI cached 15 min in sessionStorage. HUD FMR, Redfin PPSF, IGR ASR stay as small committed files. No HUD/Census/FRED keys in client JS."
+  },
+  "live": {
+    "zillow_cdn": "https://files.zillowstatic.com/research/public_csvs/",
+    "zillow_series": [
+      "zhvi",
+      "zori",
+      "median_sale_price",
+      "invt_fs",
+      "new_listings",
+      "perc_listings_price_cut",
+      "mean_doz_pending",
+      "market_temp_index"
+    ],
+    "census_reporter": "https://api.censusreporter.org/1.0/data/show/latest",
+    "open_meteo": [
+      "https://api.open-meteo.com/v1/forecast",
+      "https://air-quality-api.open-meteo.com/v1/air-quality"
+    ],
+    "not_live": [
+      "Redfin county tracker (~230 MB) — PPSF overlay only",
+      "HUD USER FMR xlsx — WAF blocked; FY2026 2BR JSON overlay",
+      "IGR ASR / NHB Residex / RBI DBIE — no public JSON API"
+    ]
   },
   "vintages": {
-    "zhvi": "2026-07-31",
+    "zhvi": "fetched live from Zillow CDN",
     "redfin_ppsf": "2026-05-31",
     "hud_fmr": "FY2026",
-    "acs": "ACS 2024 5-year",
+    "acs": "Census Reporter latest (ACS 5-year)",
     "mumbai_asr": "FY2025-26 rates held for FY2026-27 (0% revision)",
     "rbi_hpi": "Q4:2025-26",
     "mumbai_rent": "Magicbricks JAS 2024"
   },
   "attribution": [
-    "Zillow Research, ZHVI All Homes (SFR, Condo/Co-op) county time series, smoothed seasonally adjusted.",
-    "Redfin Data Center, county housing market tracker, median sale price per square foot.",
+    "Zillow Research, public county CSVs (ZHVI, ZORI, inventory, listings, price cuts, days to pending, median sale, market heat). Fetched in-browser from files.zillowstatic.com.",
+    "Census Reporter API wrapping U.S. Census Bureau ACS 5-year tables B25064, B25077, B25002, B25003, B25070, B25031, B01003, B25001.",
+    "Redfin Data Center, county housing market tracker, median sale price per square foot (committed overlay only).",
     "U.S. Department of Housing and Urban Development, FY 2026 Fair Market Rents, 2-bedroom.",
+    "Open-Meteo, weather forecast and air-quality APIs at BMC ward centroids.",
     "Reserve Bank of India, House Price Index, base 2022-23, Q4:2025-26.",
     "Department of Registration and Stamps, Maharashtra, Annual Statement of Rates (ready reckoner), FY 2025-26 rates held for FY 2026-27.",
     "OpenCity / MCGM, BMC administrative ward boundaries (ODbL).",

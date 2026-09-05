@@ -2,10 +2,10 @@
 
 ## Cursor Cloud specific instructions
 
-This repository is a **static** COVID-19 / Social Vulnerability Index (SVI) data
-visualization website (D3.js), deployed via Firebase Hosting. All site files live
-in `public/`. There is **no build step, no test suite, and no lint config** —
-development is: edit files in `public/`, then reload the browser.
+This repository is a **static** housing-index visualization (D3.js) for Virginia
+counties and Mumbai BMC wards, deployed via Firebase Hosting. All site files
+live in `public/`. There is **no build step, no test suite, and no lint config**
+— development is: edit files in `public/`, then reload the browser.
 
 The Cloud Agent environment installs `firebase-tools` to a user-local npm prefix
 (`~/.npm-global`) and starts the Firebase Hosting emulator on port 5000.
@@ -20,8 +20,12 @@ The project is a Firebase Hosting site (see `firebase.json`, which serves the
   ```
   ~/.npm-global/bin/firebase emulators:start --only hosting --project demo-infoviz
   ```
-  Serves at `http://127.0.0.1:5000`. A `--project` value is required; any
-  `demo-*` id works and keeps the emulator fully offline (no login needed).
+  Serves at `http://127.0.0.1:5000` **on the Cloud Agent machine**. A `--project`
+  value is required; any `demo-*` id works and keeps the emulator fully offline
+  (no login needed). From your laptop, open this agent in the Agents Window,
+  click the plug icon (top right), and open the forwarded port 5000. Typing
+  `127.0.0.1:5000` in a normal browser tab hits your laptop, not this VM, unless
+  that forward is active.
 
 - Zero-dependency fallback (always works, even if `firebase-tools` is missing):
   ```
@@ -33,12 +37,15 @@ Prefer running the server in a long-lived tmux session so logs stay visible.
 
 ### Notes / gotchas
 
-- The page pulls D3, fonts, and the Firebase Analytics SDK from public CDNs at
-  runtime, so the charts only fully render with outbound internet access. Egress
-  is unrestricted in this environment.
-- Core interactive flow to smoke-test: click a bar in the circular Social
-  Vulnerability Index chart. The selected county highlights, the **About this
-  {county}** panel on the right updates (and scrolls inside that card), and the
-  radar / sunburst charts refresh.
+- The page pulls D3, fonts, Zillow CSVs, Census Reporter, and Open-Meteo from
+  public CDNs/APIs at runtime, so maps only fully render with outbound internet.
+  Egress is unrestricted in this environment.
+- Core interactive flow to smoke-test: homepage loads Virginia ZHVI choropleth
+  from live Zillow. Click a county — About panel fills with price, market, rent,
+  ACS stats and 24-month sparklines. Toggle Mumbai — ASR map plus live AQI/weather.
+  Metric chips with a green dot are live fetches; HUD FMR and $/ft² are yearly
+  overlays.
+- Do not put API keys in `public/`. Do not fetch the ~230 MB Redfin county file
+  in the browser. Do not scrape listing portals.
 - Deploying (`firebase deploy`) targets the real `infoviz-cs5764` site and
   requires Firebase auth; do not deploy as part of routine development.

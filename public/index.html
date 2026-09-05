@@ -3,117 +3,77 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Virginia COVID-19 &amp; Social Vulnerability</title>
+  <title>Virginia and Mumbai — live housing indices</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect fill='%23efe8dc' width='64' height='64'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='%239c5a4e' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='6' fill='%237d9a86'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=svi-split-1">
+  <link rel="stylesheet" href="assets/css/style.css?v=live-1">
 </head>
-<body>
+<body class="housing-page">
   <div id="boot-screen">
-    <p class="boot-title">Virginia COVID-19 &amp; SVI</p>
-    <p id="boot-log" class="boot-log">Loading charts…</p>
+    <p class="boot-title">Housing indices</p>
+    <p id="boot-log" class="boot-log">Fetching live Zillow, Census, and weather…</p>
   </div>
 
-  <div class="dashboard" hidden>
+  <div class="dashboard housing-dash" hidden>
     <header class="hud">
       <div class="hud-left">
         <div class="hud-brand">
-          <p class="hud-kicker">CS5764 · Information visualization</p>
-          <h1>How social vulnerability shaped COVID-19 in Virginia</h1>
+          <p class="hud-kicker">CS5764 · Live Zillow + Census + Open-Meteo · yearly HUD / ASR overlays</p>
+          <h1>What homes cost in Virginia counties and Mumbai wards</h1>
         </div>
       </div>
       <div class="hud-right">
-        <p class="hud-chip"><span class="hud-chip-label">Period</span><span>Mar 2020 – May 2022</span></p>
-        <a class="hud-btn" href="housing.html">Housing maps</a>
-        <a class="hud-btn" href="https://github.com/TANISHQBAFNA/Info-Vis-Project/tree/main/public/assets/data" target="_blank" rel="noopener">Data</a>
-        <button class="hud-btn" id="btn-reset" type="button">Reset view</button>
+        <p class="hud-chip"><span class="hud-chip-label">Feed</span><span id="live-stamp">—</span></p>
+        <button class="hud-btn" id="btn-reset" type="button">Reset</button>
       </div>
     </header>
 
-    <section class="command-row">
+    <section class="command-row housing-command">
+      <div class="place-toggle" role="tablist" aria-label="Place">
+        <button type="button" class="hud-btn is-place" data-place="va" aria-pressed="true">Virginia</button>
+        <button type="button" class="hud-btn is-place" data-place="mumbai" aria-pressed="false">Mumbai</button>
+      </div>
       <div class="kpis" id="kpi-row"></div>
       <div class="command-bar">
-        <label class="command-label" for="county-search">County</label>
-        <input id="county-search" type="search" placeholder="Search a county or city…" autocomplete="off" spellcheck="false">
-        <ul id="county-results" class="command-results" hidden></ul>
+        <label class="command-label" for="place-search">Find</label>
+        <input id="place-search" type="search" placeholder="County or ward…" autocomplete="off" spellcheck="false">
+        <ul id="place-results" class="command-results" hidden></ul>
       </div>
     </section>
 
-    <div class="bento">
-      <section class="panel panel-hero" id="panel-cases">
+    <div class="bento housing-bento">
+      <section class="panel" id="panel-map">
         <header class="panel-head">
-          <h2>Total COVID cases by county</h2>
-          <span class="panel-hint">Daily new cases in five high-SVI counties · click a layer · drag to zoom</span>
+          <h2 id="map-title">Virginia · typical home $</h2>
+          <span class="panel-hint" id="map-hint">Each shape is a county or independent city</span>
         </header>
-        <div id="stacked-chart" class="chart-mount chart-mount-hero"></div>
+        <div class="metric-row" id="metric-row"></div>
+        <div class="map-legend" id="map-legend"></div>
+        <div id="choropleth" class="chart-mount chart-mount-map"></div>
       </section>
 
-      <section class="panel panel-combo" id="panel-svi-about">
-        <div class="combo-chart" id="panel-array">
-          <header class="panel-head">
-            <h2>Social Vulnerability Index</h2>
-            <span class="panel-hint">Each bar is a county or city · click to learn more</span>
-          </header>
-          <div class="legend-row" id="array-legend"></div>
-          <div id="circular-chart" class="chart-mount chart-mount-svi"></div>
-        </div>
-        <div class="combo-notes" id="panel-intel">
-          <header class="panel-head">
-            <h2 id="intel-title">About this county</h2>
-            <span class="panel-hint" id="intel-stamp">Overview</span>
-          </header>
-          <div id="intel-feed" class="intel-feed"></div>
-        </div>
-      </section>
-
-      <section class="panel" id="panel-radar">
+      <section class="panel" id="panel-about">
         <header class="panel-head">
-          <h2 id="radar-title">SVI themes for this county</h2>
-          <span class="panel-hint">Click an axis to read about that theme</span>
+          <h2 id="about-title">About this place</h2>
+          <span class="panel-hint" id="about-stamp">Index</span>
         </header>
-        <div id="radar-chart" class="chart-mount"></div>
-      </section>
-
-      <section class="panel" id="panel-taxonomy">
-        <header class="panel-head">
-          <h2 id="taxonomy-title">What SVI measures</h2>
-          <span class="panel-hint">Slice size is this county’s score · click a ring</span>
-        </header>
-        <div id="taxonomy-chart" class="chart-mount"></div>
+        <div id="about-feed" class="intel-feed"></div>
       </section>
     </div>
 
     <footer class="ticker">
       <span class="ticker-tag">Note</span>
-      <p id="ticker-line">Charts are linked: click a county, theme, or case layer to update the story on the right.</p>
+      <p id="ticker-line">Browser fetches Zillow and Census. No keys on the page.</p>
     </footer>
   </div>
 
   <div id="mc-tooltip" class="mc-tooltip" role="tooltip" hidden></div>
 
   <script src="https://d3js.org/d3.v7.min.js"></script>
-  <script src="assets/js/dashboard.js?v=svi-split-1"></script>
-  <script src="assets/js/circular.js?v=svi-split-1"></script>
-  <script src="assets/js/radarChart.js"></script>
-  <script src="assets/js/stackedChart.js"></script>
-  <script src="assets/js/treemap.js"></script>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-analytics.js";
-    const firebaseConfig = {
-      apiKey: "AIzaSyAjnhdHBiEVo_NFdQSboH0bjQ_Lp6aA49U",
-      authDomain: "tanishqbafna-27236.firebaseapp.com",
-      databaseURL: "https://tanishqbafna-27236.firebaseio.com",
-      projectId: "tanishqbafna-27236",
-      storageBucket: "tanishqbafna-27236.appspot.com",
-      messagingSenderId: "648135525868",
-      appId: "1:648135525868:web:cf9686ff3960e5dc88acc9",
-      measurementId: "G-EVJW3LFMMV"
-    };
-    const app = initializeApp(firebaseConfig);
-    getAnalytics(app);
-  </script>
+  <script src="assets/js/housing-maps.js?v=live-1"></script>
+  <script src="assets/js/housing-live.js?v=live-1"></script>
+  <script src="assets/js/housing.js?v=live-1"></script>
 </body>
 </html>
