@@ -157,10 +157,12 @@
         name: r.RegionName,
         base: r.BaseDate,
         yoy: num(r[yoyColName]),
-        horizon: yoyColName
+        horizon: yoyColName,
+        state: r.StateName || ""
       };
       const city = metroCity(r.RegionName);
-      if (city) byKey[city] = rec;
+      const st = String(r.StateName || "").trim().toLowerCase();
+      if (city && st) byKey[city + "|" + st] = rec;
       if (r.RegionName) byKey[String(r.RegionName).toLowerCase()] = rec;
     });
     return { byKey, latest: yoyColName, monthCols: dateCols };
@@ -169,6 +171,18 @@
   function metroCity(name) {
     if (!name) return "";
     return String(name).split(",")[0].split("-")[0].trim().toLowerCase();
+  }
+
+  function lookupZhvf(metro, byKey) {
+    if (!metro || !byKey) return {};
+    const city = metroCity(metro);
+    const suffix = String(metro).split(",")[1] || "";
+    const states = suffix.toLowerCase().split(/[^a-z]+/).filter((s) => s.length === 2);
+    for (let i = 0; i < states.length; i++) {
+      const hit = byKey[city + "|" + states[i]];
+      if (hit) return hit;
+    }
+    return byKey[city + "|va"] || byKey[city + "|dc"] || {};
   }
 
   function parseZillowVA(text, opts) {
@@ -271,6 +285,7 @@
       const ac = acs[fips] || {};
       const fb = fbMap[fips] || {};
       const pp = ppsfMap[fips];
+      const fc = lookupZhvf(zh.metro, zhvf);
       return {
         fips,
         name: (f.properties && f.properties.name) || zh.name || fb.name || fips,
@@ -283,9 +298,9 @@
         zoriSeries: zo.series || [],
         zoriVintage: zo.vintage,
         years_rent: (zh.latest != null && zo.latest) ? zh.latest / (zo.latest * 12) : null,
-        zhvfYoy: (zhvf[metroCity(zh.metro)] || {}).yoy,
-        zhvfName: (zhvf[metroCity(zh.metro)] || {}).name,
-        zhvfHorizon: (zhvf[metroCity(zh.metro)] || {}).horizon,
+        zhvfYoy: fc.yoy,
+        zhvfName: fc.name,
+        zhvfHorizon: fc.horizon,
         sale: pick(sa.latest, num(fb.median_sale)),
         saleVintage: sa.vintage,
         inv: (z("inv", fips) || {}).latest,
