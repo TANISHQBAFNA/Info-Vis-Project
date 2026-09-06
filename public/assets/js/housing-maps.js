@@ -79,6 +79,10 @@
     return isDark() ? "#1c1916" : "#fffdf8";
   }
 
+  function reduceMotion() {
+    return global.matchMedia && global.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
   function duration(ms) {
     return reduceMotion() ? 0 : (ms == null ? 1100 : ms);
   }
