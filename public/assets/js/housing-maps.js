@@ -1,5 +1,6 @@
 /**
  * Choropleth for Virginia counties and BMC wards.
+ * Reuses the SVG on metric/selection change so fills tween instead of wiping.
  */
 (function (global) {
   "use strict";
@@ -70,62 +71,182 @@
       .range([COLORS[0], COLORS[2], COLORS[3]]).clamp(true);
   }
 
-  function draw(opts) {
-    const { el, width, height } = sizeOf("choropleth", 420);
+  function reduceMotion() {
+    return global.matchMedia && global.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  function duration(ms) {
+    return reduceMotion() ? 0 : (ms == null ? 720 : ms);
+  }
+
+  function fillOf(d, byId, metric, color) {
+    const row = byId.get(String(d.id));
+    const v = row ? +row[metric] : NaN;
+    return Number.isFinite(v) ? color(v) : "#e0d6c8";
+  }
+
+  function strokeOf(d, selectedId, compareId) {
+    const id = String(d.id);
+    if (id === String(selectedId)) return INK;
+    if (compareId && id === String(compareId)) return "#8f5b4a";
+    return "#fffdf8";
+  }
+
+  function strokeW(d, selectedId, compareId) {
+    const id = String(d.id);
+    if (id === String(selectedId)) return 1.9;
+    if (compareId && id === String(compareId)) return 1.6;
+    return 0.6;
+  }
+
+  function spotlight(g, hoverId, selectedId, compareId) {
+    if (!g) return;
+    g.selectAll("path.unit").attr("opacity", (d) => {
+      const id = String(d.id);
+      if (!hoverId) return 1;
+      if (id === String(hoverId) || id === String(selectedId) || (compareId && id === String(compareId))) return 1;
+      return 0.2;
+    });
+  }
+
+  function cameraTo(g, path, geo, opts, width, height) {
+    const dur = duration(opts.camera === "wide" ? 900 : 800);
+    const feat = geo.features.find((f) => String(f.id) === String(opts.selectedId));
+    if (!feat || opts.camera === "wide") {
+      g.transition().duration(dur).attr("transform", "translate(0,0)scale(1)");
+      return;
+    }
+    const c = path.centroid(feat);
+    if (!c || !Number.isFinite(c[0]) || !Number.isFinite(c[1])) {
+      g.transition().duration(dur).attr("transform", "translate(0,0)scale(1)");
+      return;
+    }
+    const k = 1.16;
+    const tx = width / 2 - k * c[0];
+    const ty = (height - 28) / 2 - k * c[1];
+    g.transition().duration(dur).attr("transform", "translate(" + tx + "," + ty + ")scale(" + k + ")");
+  }
+
+  function legend(opts, domain) {
+    const el = document.getElementById("map-legend");
     if (!el) return;
-    el.innerHTML = "";
-    const geo = opts.geo;
-    const rows = opts.rows || [];
-    const key = opts.idKey;
-    const metric = opts.metric;
-    const selectedId = opts.selectedId;
-    const byId = new Map(rows.map((r) => [String(r[key]), r]));
+    const lo = Number.isFinite(domain[0]) ? fmt(domain[0], opts.kind) : "—";
+    const hi = Number.isFinite(domain[1]) ? fmt(domain[1], opts.kind) : "—";
+    const rampClass = opts.kind === "yoy" ? "ramp ramp-yoy" : "ramp";
+    el.innerHTML =
+      `<span class="${rampClass}"><i></i></span><span>${lo}</span><span>${hi}</span>` +
+      `<span>Hover to spotlight · click to lock</span>`;
+  }
 
-    const values = rows.map((r) => +r[metric]).filter(Number.isFinite);
-    const domain = values.length ? d3.extent(values) : [0, 1];
-    const color = colorScale(values, opts.kind);
-
-    const svg = d3.select(el).append("svg")
-      .attr("viewBox", `0 0 ${width} ${height}`)
-      .attr("preserveAspectRatio", "xMidYMid meet");
-    svg.append("rect").attr("width", width).attr("height", height).attr("fill", "#f4ece2");
-
-    const projection = d3.geoMercator();
-    const path = d3.geoPath(projection);
-    projection.fitExtent([[12, 12], [width - 12, height - 36]], geo);
-
-    svg.append("g").selectAll("path.unit")
-      .data(geo.features)
-      .join("path")
-      .attr("class", "unit")
-      .attr("d", path)
-      .attr("fill", (d) => {
-        const row = byId.get(String(d.id));
-        const v = row ? +row[metric] : NaN;
-        return Number.isFinite(v) ? color(v) : "#e0d6c8";
-      })
-      .attr("stroke", (d) => String(d.id) === String(selectedId) ? INK : "#fffdf8")
-      .attr("stroke-width", (d) => String(d.id) === String(selectedId) ? 1.8 : 0.6)
+  function bindUnit(sel, opts, byId, selectedId, compareId, g) {
+    sel
       .style("cursor", "pointer")
       .on("click", (event, d) => {
         if (opts.onSelect) opts.onSelect(String(d.id));
       })
       .on("mousemove", (event, d) => {
+        spotlight(g, d.id, selectedId, compareId);
         const row = byId.get(String(d.id));
         if (!row || !opts.tip) return;
-        opts.tip(event, `<strong>${row.label || row.name}</strong><br>${opts.metricLabel}: ${fmt(row[metric], opts.kind)}`);
+        opts.tip(event, `<strong>${row.label || row.name}</strong><br>${opts.metricLabel}: ${fmt(row[opts.metric], opts.kind)}`);
       })
-      .on("mouseleave", () => { if (opts.tip) opts.tip(null); });
+      .on("mouseleave", () => {
+        spotlight(g, null, selectedId, compareId);
+        if (opts.tip) opts.tip(null);
+      });
+  }
 
-    const legend = document.getElementById("map-legend");
-    if (legend) {
-      const lo = Number.isFinite(domain[0]) ? fmt(domain[0], opts.kind) : "—";
-      const hi = Number.isFinite(domain[1]) ? fmt(domain[1], opts.kind) : "—";
-      const rampClass = opts.kind === "yoy" ? "ramp ramp-yoy" : "ramp";
-      legend.innerHTML =
-        `<span class="${rampClass}"><i></i></span><span>${lo}</span><span>${hi}</span>` +
-        `<span>Click a shape</span>`;
+  function draw(opts) {
+    const { el, width, height } = sizeOf("choropleth", 420);
+    if (!el) return;
+    const geo = opts.geo;
+    const rows = opts.rows || [];
+    const key = opts.idKey;
+    const metric = opts.metric;
+    const selectedId = opts.selectedId;
+    const compareId = opts.compareId;
+    const byId = new Map(rows.map((r) => [String(r[key]), r]));
+    const values = rows.map((r) => +r[metric]).filter(Number.isFinite);
+    const domain = values.length ? d3.extent(values) : [0, 1];
+    const color = colorScale(values, opts.kind);
+    const dur = duration(opts.wipe ? 0 : 720);
+    const st = el._map;
+    const sizeOk = st && Math.abs(st.width - width) < 10 && Math.abs(st.height - height) < 10;
+    const reuse = st && st.place === opts.place && st.svg && el.querySelector("svg") && sizeOk && !opts.force;
+
+    legend(opts, domain);
+
+    if (reuse) {
+      const g = st.g;
+      const units = g.selectAll("path.unit").data(geo.features, (d) => d.id);
+      units.join(
+        (enter) => enter.append("path").attr("class", "unit").attr("d", st.path),
+        (update) => update,
+        (exit) => exit.remove()
+      );
+      const all = g.selectAll("path.unit");
+      all.transition().duration(dur)
+        .attr("fill", (d) => fillOf(d, byId, metric, color))
+        .attr("stroke", (d) => strokeOf(d, selectedId, compareId))
+        .attr("stroke-width", (d) => strokeW(d, selectedId, compareId));
+      bindUnit(all, opts, byId, selectedId, compareId, g);
+      spotlight(g, null, selectedId, compareId);
+      if (opts.camera !== st.camera || String(selectedId) !== String(st.selectedId)) {
+        cameraTo(g, st.path, geo, opts, width, height);
+      }
+      st.metric = metric;
+      st.selectedId = selectedId;
+      st.compareId = compareId;
+      st.camera = opts.camera;
+      st.byId = byId;
+      return;
     }
+
+    el.innerHTML = "";
+    const svg = d3.select(el).append("svg")
+      .attr("viewBox", `0 0 ${width} ${height}`)
+      .attr("preserveAspectRatio", "xMidYMid meet");
+    const clipId = "map-clip-" + Math.round(width) + "-" + Math.round(height);
+    svg.append("defs").append("clipPath").attr("id", clipId)
+      .append("rect").attr("width", width).attr("height", height);
+    svg.append("rect").attr("width", width).attr("height", height).attr("fill", "#f4ece2");
+
+    const projection = d3.geoMercator();
+    const path = d3.geoPath(projection);
+    projection.fitExtent([[12, 12], [width - 12, height - 12]], geo);
+
+    const clip = svg.append("g").attr("clip-path", "url(#" + clipId + ")");
+    const g = clip.append("g").attr("class", "units");
+
+    const units = g.selectAll("path.unit")
+      .data(geo.features, (d) => d.id)
+      .join("path")
+      .attr("class", "unit")
+      .attr("d", path)
+      .attr("fill", (d) => fillOf(d, byId, metric, color))
+      .attr("stroke", (d) => strokeOf(d, selectedId, compareId))
+      .attr("stroke-width", (d) => strokeW(d, selectedId, compareId));
+
+    bindUnit(units, opts, byId, selectedId, compareId, g);
+
+    if (!reduceMotion() && opts.wipe) {
+      g.attr("opacity", 0).transition().duration(640).attr("opacity", 1);
+    }
+
+    el._map = {
+      place: opts.place,
+      svg,
+      g,
+      path,
+      width,
+      height,
+      metric,
+      selectedId,
+      compareId,
+      camera: opts.camera,
+      byId
+    };
+    cameraTo(g, path, geo, opts, width, height);
   }
 
   global.HousingMaps = { draw, fmt, spark, COLORS };

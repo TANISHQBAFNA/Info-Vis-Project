@@ -36,6 +36,9 @@
     place: "va",
     metric: "zhvi",
     selectedId: DEFAULTS.va,
+    compareId: null,
+    scrubIndex: null,
+    camera: "wide",
     sources: null,
     va: null,
     mx: null,
@@ -73,7 +76,8 @@
       const dash = document.querySelector(".dashboard");
       if (dash) dash.hidden = false;
       this.bind();
-      this.render();
+      this.render({ full: true });
+      if (global.HousingCine && HousingCine.bind) HousingCine.bind(this);
     },
 
     pack() { return this.place === "va" ? this.va : this.mx; },
@@ -88,18 +92,25 @@
       return METRICS[this.place].find((m) => m.id === this.metric) || METRICS[this.place][0];
     },
 
-    setPlace(place) {
+    setPlace(place, fromCine) {
       if (place !== "va" && place !== "mumbai") return;
+      if (!fromCine && global.HousingCine && HousingCine.scenes && HousingCine.scenes.length) {
+        HousingCine.goPlace(place);
+        return;
+      }
       this.place = place;
       this.metric = METRICS[place][0].id;
       this.selectedId = DEFAULTS[place];
-      this.render();
+      this.compareId = null;
+      this.scrubIndex = null;
+      this.camera = "wide";
+      this.render({ full: true, wipe: true });
     },
 
     setMetric(id) {
       if (!METRICS[this.place].some((m) => m.id === id)) return;
       this.metric = id;
-      this.render();
+      this.render({ skipTime: true });
     },
 
     select(id) {
@@ -107,7 +118,117 @@
       const key = this.idKey();
       if (!this.rows().some((r) => String(r[key]) === String(id))) return;
       this.selectedId = id;
+      this.camera = "focus";
+      this.scrubIndex = null;
       this.render();
+    },
+
+    applyScene(scene) {
+      if (!scene) return;
+      const placeChanged = scene.place && scene.place !== this.place;
+      if (placeChanged) {
+        this.place = scene.place;
+        this.compareId = null;
+        this.scrubIndex = null;
+        if (!scene.select) this.selectedId = DEFAULTS[this.place];
+      }
+      if (scene.metric && METRICS[this.place] && METRICS[this.place].some((m) => m.id === scene.metric)) {
+        this.metric = scene.metric;
+      }
+      if (scene.select) this.selectedId = scene.select;
+      this.camera = scene.camera || "focus";
+      this.render({ full: placeChanged, wipe: placeChanged });
+      requestAnimationFrame(() => {
+        this.drawMap();
+        this.drawTime();
+      });
+    },
+
+    toggleCompare() {
+      if (this.compareId && String(this.compareId) === String(this.selectedId)) {
+        this.compareId = null;
+      } else {
+        this.compareId = this.selectedId;
+      }
+      this.syncPin();
+      this.render();
+    },
+
+    syncPin() {
+      const btn = document.getElementById("btn-pin");
+      if (!btn) return;
+      const on = !!this.compareId;
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+      btn.classList.toggle("is-active", on);
+      const cmp = this.compareId && this.rows().find((r) => String(r[this.idKey()]) === String(this.compareId));
+      btn.textContent = on ? ("Holding " + (cmp ? cmp.name : "place")) : "Hold to compare";
+    },
+
+    setScrub(i) {
+      this.scrubIndex = i;
+      this.drawTime();
+      this.syncScrub();
+    },
+
+    playWalk() {
+      if (this.place !== "va") return;
+      const w = this.selected();
+      if (!global.HousingPath || !w) return;
+      const walk = HousingPath.alignedWalk(w.zhviSeries, w.zoriSeries);
+      if (walk.length < 3) return;
+      if (this._playTimer) {
+        this._playTimer.stop();
+        this._playTimer = null;
+      }
+      const reduce = global.matchMedia && global.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (reduce) {
+        this.scrubIndex = walk.length - 1;
+        this.drawTime();
+        this.syncScrub();
+        return;
+      }
+      let i = 0;
+      this.scrubIndex = 0;
+      this.drawTime();
+      this.syncScrub();
+      this._playTimer = d3.interval(() => {
+        i += 1;
+        if (i >= walk.length) {
+          this._playTimer.stop();
+          this._playTimer = null;
+          this.scrubIndex = walk.length - 1;
+          this.drawTime();
+          this.syncScrub();
+          return;
+        }
+        this.scrubIndex = i;
+        this.drawTime();
+        this.syncScrub();
+      }, 240);
+    },
+
+    syncScrub() {
+      const wrap = document.getElementById("year-scrub-wrap");
+      const input = document.getElementById("year-scrub");
+      const lab = document.getElementById("year-scrub-label");
+      if (!wrap || !input) return;
+      if (this.place !== "va") {
+        wrap.hidden = true;
+        return;
+      }
+      const w = this.selected();
+      const walk = global.HousingPath && w ? HousingPath.alignedWalk(w.zhviSeries, w.zoriSeries) : [];
+      if (walk.length < 3) {
+        wrap.hidden = true;
+        return;
+      }
+      wrap.hidden = false;
+      input.max = String(walk.length - 1);
+      const i = Number.isFinite(this.scrubIndex) ? this.scrubIndex : walk.length - 1;
+      input.value = String(i);
+      const yr = walk[i] && walk[i].year;
+      if (lab) lab.textContent = yr == null ? "now" : String(yr);
+      input.setAttribute("aria-valuetext", lab ? lab.textContent : "");
     },
 
     bind() {
@@ -117,8 +238,20 @@
       const reset = document.getElementById("btn-reset");
       if (reset) reset.addEventListener("click", () => {
         this.selectedId = DEFAULTS[this.place];
-        this.render();
+        this.compareId = null;
+        this.scrubIndex = null;
+        this.camera = "wide";
+        this.syncPin();
+        this.render({ full: true });
       });
+      const pin = document.getElementById("btn-pin");
+      if (pin) pin.addEventListener("click", () => this.toggleCompare());
+      const play = document.getElementById("btn-play-years");
+      if (play) play.addEventListener("click", () => this.playWalk());
+      const scrub = document.getElementById("year-scrub");
+      if (scrub) {
+        scrub.addEventListener("input", () => this.setScrub(+scrub.value));
+      }
       this.bindSearch();
       let t;
       window.addEventListener("resize", () => {
@@ -159,18 +292,20 @@
       });
     },
 
-    render() {
+    render(opts) {
+      opts = opts || {};
       document.querySelectorAll("[data-place]").forEach((btn) => {
         const on = btn.getAttribute("data-place") === this.place;
         btn.setAttribute("aria-pressed", on ? "true" : "false");
         btn.classList.toggle("is-active", on);
       });
+      this.syncPin();
       this.renderMetrics();
       this.renderKpis();
       try { this.renderAbout(); }
       catch (err) { console.warn("about fail", err); }
-      this.drawMap();
-      this.drawTime();
+      this.drawMap(opts);
+      if (!opts.skipTime) this.drawTime();
       this.stamp();
       const search = document.getElementById("place-search");
       const sel = this.selected();
@@ -340,7 +475,8 @@
       return bits.join(" · ");
     },
 
-    drawMap() {
+    drawMap(opts) {
+      opts = opts || {};
       const title = document.getElementById("map-title");
       const hint = document.getElementById("map-hint");
       const m = this.metricDef();
@@ -351,12 +487,13 @@
       }
       if (hint) {
         hint.textContent = this.place === "va"
-          ? (m.live ? "Live Zillow / Census · each shape is a county or independent city" : "Yearly overlay · each shape is a county or independent city")
-          : "Each shape is a BMC administrative ward · ready reckoner + Census 2011 stock";
+          ? (m.live ? "Live Zillow / Census · hover to spotlight · click to lock" : "Yearly overlay · hover to spotlight · click to lock")
+          : "BMC ward · ready reckoner + Census 2011 stock · hover to spotlight";
       }
       if (!global.HousingMaps || !this.geo()) return;
       try {
         HousingMaps.draw({
+          place: this.place,
           geo: this.geo(),
           rows: this.rows().map((r) => Object.assign({}, r, { label: r.name })),
           idKey: this.idKey(),
@@ -364,6 +501,10 @@
           kind: m.kind,
           metricLabel: m.label,
           selectedId: this.selectedId,
+          compareId: this.compareId,
+          camera: this.camera || "focus",
+          force: !!opts.full,
+          wipe: !!opts.wipe,
           onSelect: (id) => this.select(id),
           tip: (event, html) => this.tip(html, event && event.clientX, event && event.clientY)
         });
@@ -390,11 +531,20 @@
             : "Left: rent×price path. Right: index 10y ago = 100. Cone is CAGR ± yearly volatility. Not a 5-year official forecast.";
         }
         try {
-          HousingPath.drawWalk({ row: w, rows: this.rows(), tip });
-          HousingPath.drawFan({ row: w });
+          const cmp = this.compareId && this.rows().find((r) => String(r.fips) === String(this.compareId));
+          HousingPath.drawWalk({
+            row: w,
+            rows: this.rows(),
+            compareRow: cmp && String(cmp.fips) !== String(w.fips) ? cmp : null,
+            yearIndex: this.scrubIndex,
+            onYear: (i) => this.setScrub(i),
+            tip
+          });
+          HousingPath.drawFan({ row: w, yearIndex: this.scrubIndex });
         } catch (err) {
           console.warn("time fail", err);
         }
+        this.syncScrub();
       } else {
         const leftH = document.getElementById("time-h-left");
         const rightH = document.getElementById("time-h-right");
@@ -415,9 +565,10 @@
             onSelect: (id) => this.select(id),
             tip
           });
-        } catch (err) {
-          console.warn("mx time fail", err);
-        }
+          } catch (err) {
+            console.warn("mx time fail", err);
+          }
+          this.syncScrub();
       }
     },
 
