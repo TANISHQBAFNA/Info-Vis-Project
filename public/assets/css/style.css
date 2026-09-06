@@ -1099,8 +1099,8 @@ a {
   min-height: 120px;
 }
 
-body.cine-page[data-focus="map"] .cine-map { flex: 1.35; }
-body.cine-page[data-focus="map"] .cine-dock { flex: 0.55; }
+body.cine-page[data-focus="map"] .cine-map { flex: 1.2; }
+body.cine-page[data-focus="map"] .cine-dock { flex: 0.78; }
 
 body.cine-page[data-focus="time"] .cine-map { flex: 0.72; }
 body.cine-page[data-focus="time"] .cine-dock { flex: 1.2; }
@@ -1172,6 +1172,44 @@ body.cine-page[data-focus="about"] .cine-dock {
 .cine-play {
   padding: 6px 12px;
   font-size: 12px;
+  background: var(--panel-solid);
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.cine-hero {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 4;
+  max-width: min(280px, 46%);
+  padding: 10px 12px 12px;
+  background: rgba(255, 253, 248, 0.92);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(70, 52, 36, 0.08);
+}
+
+.cine-hero-place,
+.cine-hero-metric {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.cine-hero-metric {
+  margin-top: 6px;
+}
+
+.cine-hero-value {
+  margin: 2px 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(22px, 2.4vw, 34px);
+  line-height: 1.1;
+  color: var(--ink);
 }
 
 #year-scrub {

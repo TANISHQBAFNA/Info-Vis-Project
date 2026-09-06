@@ -315,6 +315,7 @@
       this.syncPin();
       this.renderMetrics();
       this.renderKpis();
+      this.renderHero();
       try { this.renderAbout(); }
       catch (err) { console.warn("about fail", err); }
       this.drawMap(opts);
@@ -323,6 +324,21 @@
       const search = document.getElementById("place-search");
       const sel = this.selected();
       if (search && sel) search.value = sel.name;
+    },
+
+    renderHero() {
+      const el = document.getElementById("cine-hero");
+      if (!el) return;
+      const w = this.selected();
+      const m = this.metricDef();
+      if (!w || !m || !global.HousingMaps) {
+        el.innerHTML = "";
+        return;
+      }
+      el.innerHTML =
+        `<p class="cine-hero-place">${esc(w.name)}</p>` +
+        `<p class="cine-hero-metric">${esc(m.label)}</p>` +
+        `<p class="cine-hero-value">${HousingMaps.fmt(w[m.id], m.kind)}</p>`;
     },
 
     renderMetrics() {
