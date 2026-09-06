@@ -67,8 +67,16 @@
       .range([COLORS[0], COLORS[2], COLORS[3]]).clamp(true);
   }
 
-  function reduceMotion() {
-    return global.matchMedia && global.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function isDark() {
+    return document.body.classList.contains("cine-page");
+  }
+
+  function paper() {
+    return isDark() ? "#161310" : "#f4ece2";
+  }
+
+  function hair() {
+    return isDark() ? "#1c1916" : "#fffdf8";
   }
 
   function duration(ms) {
@@ -89,9 +97,9 @@
   }
 
   function strokeOf(d, opts) {
-    if (hotId(d, opts) && String(d.id) === String(opts.selectedId)) return INK;
-    if (hotId(d, opts)) return "#8f5b4a";
-    return "#fffdf8";
+    if (hotId(d, opts) && String(d.id) === String(opts.selectedId)) return isDark() ? "#f4ece2" : INK;
+    if (hotId(d, opts)) return "#cbb688";
+    return hair();
   }
 
   function strokeW(d, opts) {
@@ -187,14 +195,15 @@
 
     const sel = st.callouts.selectAll("g.callout").data(data, (d) => d.id);
     const enter = sel.enter().append("g").attr("class", "callout");
-    enter.append("rect").attr("class", "callout-bg").attr("fill", "rgba(255,253,248,0.92)")
-      .attr("stroke", "#cfc3b3").attr("stroke-width", 1).attr("rx", 7);
+    enter.append("rect").attr("class", "callout-bg")
+      .attr("fill", isDark() ? "rgba(18,16,14,0.92)" : "rgba(255,253,248,0.92)")
+      .attr("stroke", isDark() ? "#cbb688" : "#cfc3b3").attr("stroke-width", 1).attr("rx", 7);
     enter.append("text").attr("class", "callout-name")
-      .attr("fill", "#7a7168").attr("font-size", 10)
+      .attr("fill", isDark() ? "#cbb688" : "#7a7168").attr("font-size", 10)
       .attr("font-family", '"Source Sans 3","Segoe UI",sans-serif')
       .attr("x", 0).attr("y", 0);
     enter.append("text").attr("class", "callout-val")
-      .attr("fill", INK).attr("font-size", 15).attr("font-weight", 600)
+      .attr("fill", isDark() ? "#f4ece2" : INK).attr("font-size", 15).attr("font-weight", 600)
       .attr("font-family", 'Fraunces,"Times New Roman",serif')
       .attr("x", 0).attr("y", 16);
     const all = enter.merge(sel);
@@ -344,7 +353,7 @@
     const clipId = "map-clip-" + Math.round(width) + "-" + Math.round(height);
     svg.append("defs").append("clipPath").attr("id", clipId)
       .append("rect").attr("width", width).attr("height", height);
-    svg.append("rect").attr("width", width).attr("height", height).attr("fill", "#f4ece2");
+    svg.append("rect").attr("width", width).attr("height", height).attr("fill", paper());
 
     const projection = d3.geoMercator();
     const path = d3.geoPath(projection);

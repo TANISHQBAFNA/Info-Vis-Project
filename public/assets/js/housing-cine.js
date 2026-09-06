@@ -132,6 +132,7 @@
         select: select,
         pair: el.getAttribute("data-pair") || null,
         camera: el.getAttribute("data-camera") || "wide",
+        stage: el.getAttribute("data-stage") || "map",
         focus: el.getAttribute("data-focus") || "map",
         dim: el.getAttribute("data-dim") || null,
         kicker: el.getAttribute("data-kicker") || "",
@@ -152,6 +153,7 @@
       });
       const scene = this.read(this.scenes[i]);
       document.body.dataset.scene = scene.id || "";
+      document.body.dataset.stage = scene.stage || "map";
       document.body.dataset.focus = scene.focus;
       document.body.classList.toggle("is-coda", scene.id === "scene-coda");
       if (opts && opts.silent) return;

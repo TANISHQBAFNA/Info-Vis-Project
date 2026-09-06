@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Virginia and Mumbai — live housing indices</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect fill='%23efe8dc' width='64' height='64'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='%239c5a4e' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='6' fill='%237d9a86'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect fill='%231c1916' width='64' height='64'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='%23cbb688' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='6' fill='%237d9a86'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=cine-3">
+  <link rel="stylesheet" href="assets/css/style.css?v=film-1">
 </head>
 <body class="housing-page cine-page">
   <div id="boot-screen">
@@ -22,180 +22,183 @@
   <nav class="cine-progress" id="cine-progress" aria-label="Chapters"></nav>
 
   <div class="dashboard housing-dash cine-dash" hidden>
-    <header class="hud cine-hud">
-      <div class="hud-left">
-        <div class="hud-brand">
-          <p class="hud-kicker">CS5764 · Live Zillow + Census · Mumbai ready reckoner</p>
-          <h1>What homes cost in Virginia counties and Mumbai wards</h1>
+    <header class="film-bar">
+      <p class="film-kicker">CS5764 · Housing</p>
+      <p class="film-live"><span id="live-stamp">—</span></p>
+      <p class="cine-keys" title="Keyboard">j k · scroll · space</p>
+      <div class="film-tools" id="film-tools">
+        <div class="place-toggle" role="tablist" aria-label="Place">
+          <button type="button" class="hud-btn is-place" data-place="va" aria-pressed="true">Virginia</button>
+          <button type="button" class="hud-btn is-place" data-place="mumbai" aria-pressed="false">Mumbai</button>
         </div>
-      </div>
-      <div class="hud-right">
-        <p class="hud-chip"><span class="hud-chip-label">Feed</span><span id="live-stamp">—</span></p>
-        <p class="cine-keys" title="Keyboard">j k · ↑ ↓ · space</p>
+        <div class="kpis" id="kpi-row"></div>
+        <div class="command-bar">
+          <label class="command-label" for="place-search">Find</label>
+          <input id="place-search" type="search" placeholder="County or ward…" autocomplete="off" spellcheck="false">
+          <ul id="place-results" class="command-results" hidden></ul>
+        </div>
         <button class="hud-btn" id="btn-pin" type="button" aria-pressed="false">Hold to compare</button>
         <button class="hud-btn" id="btn-reset" type="button">Reset</button>
       </div>
     </header>
 
-    <section class="command-row housing-command cine-command">
-      <div class="place-toggle" role="tablist" aria-label="Place">
-        <button type="button" class="hud-btn is-place" data-place="va" aria-pressed="true">Virginia</button>
-        <button type="button" class="hud-btn is-place" data-place="mumbai" aria-pressed="false">Mumbai</button>
-      </div>
-      <div class="kpis" id="kpi-row"></div>
-      <div class="command-bar">
-        <label class="command-label" for="place-search">Find</label>
-        <input id="place-search" type="search" placeholder="County or ward…" autocomplete="off" spellcheck="false">
-        <ul id="place-results" class="command-results" hidden></ul>
-      </div>
-    </section>
+    <div class="metric-row" id="metric-row"></div>
 
     <div class="cine-frame">
-      <div class="cine-stage" id="cine-stage">
-        <section class="panel cine-map" id="panel-map">
-          <header class="panel-head">
-            <h2 id="map-title">Virginia · typical home $</h2>
-            <span class="panel-hint" id="map-hint">Each shape is a county or independent city</span>
-          </header>
-          <div class="metric-row" id="metric-row"></div>
-          <div class="map-legend" id="map-legend"></div>
+      <div class="cine-stage film-stage" id="cine-stage">
+        <div class="film-letterbox film-letterbox-t" aria-hidden="true"></div>
+
+        <div class="film-picture is-on" data-stage="map" id="panel-map">
+          <h2 id="map-title" class="film-sr">Virginia · typical home $</h2>
+          <p id="map-hint" class="film-sr">Each shape is a county or independent city</p>
           <div id="choropleth" class="chart-mount chart-mount-map"></div>
+          <div class="map-legend film-legend" id="map-legend"></div>
           <div class="cine-hero" id="cine-hero" aria-live="polite"></div>
-        </section>
+        </div>
 
-        <div class="cine-dock">
-          <section class="panel" id="panel-about">
-            <header class="panel-head">
-              <h2 id="about-title">About this place</h2>
-              <span class="panel-hint" id="about-stamp">Index</span>
-            </header>
-            <div id="about-feed" class="intel-feed"></div>
-          </section>
-
-          <section class="panel" id="panel-time">
-            <header class="panel-head">
-              <h2 id="time-title">10-year walk and 5-year cone</h2>
-              <span class="panel-hint" id="time-hint">Price vs rent path · indexed fan</span>
-            </header>
+        <div class="film-picture" data-stage="walk" id="stage-walk">
+          <div class="film-stage-head">
+            <p class="film-stage-kicker" id="time-h-left">Walk · rent × home value</p>
             <div class="cine-scrub" id="year-scrub-wrap" hidden>
               <button type="button" class="hud-btn cine-play" id="btn-play-years">Play years</button>
               <label class="cine-scrub-label" for="year-scrub">Year <span id="year-scrub-label">now</span></label>
               <input id="year-scrub" type="range" min="0" max="10" value="10" aria-valuetext="now">
             </div>
-            <div class="time-grid">
-              <div>
-                <h3 class="feed-h time-h" id="time-h-left">Walk · rent × home value</h3>
-                <div id="path-walk" class="chart-mount chart-mount-time"></div>
-              </div>
-              <div>
-                <h3 class="feed-h time-h" id="time-h-right">Index · 10y ago = 100, then a cone</h3>
-                <div id="path-fan" class="chart-mount chart-mount-time"></div>
-              </div>
-            </div>
-          </section>
+          </div>
+          <div id="path-walk" class="chart-mount film-chart"></div>
         </div>
+
+        <div class="film-picture" data-stage="cone" id="stage-cone">
+          <div class="film-stage-head">
+            <p class="film-stage-kicker" id="time-h-right">Index · 10y ago = 100, then a cone</p>
+            <p class="film-stage-note" id="time-hint">Zillow metro year 1, then a trend</p>
+          </div>
+          <h2 id="time-title" class="film-sr">10-year walk and 5-year cone</h2>
+          <div id="path-fan" class="chart-mount film-chart"></div>
+        </div>
+
+        <div class="film-picture" data-stage="ladder" id="stage-ladder">
+          <div class="film-stage-head">
+            <p class="film-stage-kicker">Ready reckoner · 24 wards</p>
+            <p class="film-stage-note">Stamp-duty floor, tallest first</p>
+          </div>
+          <div id="path-ladder" class="chart-mount film-chart"></div>
+        </div>
+
+        <div class="film-picture" data-stage="stock" id="stage-stock">
+          <div class="film-stage-head">
+            <p class="film-stage-kicker">Census 2011 · households vs floor</p>
+            <p class="film-stage-note">Island in clay, suburbs in sage</p>
+          </div>
+          <div id="path-stock" class="chart-mount film-chart"></div>
+        </div>
+
+        <div class="film-letterbox film-letterbox-b" aria-hidden="true"></div>
       </div>
 
       <div class="cine-rail" id="cine-rail">
-        <article class="cine-scene is-fly is-on" id="scene-state" data-place="va" data-metric="zhvi" data-select="none" data-camera="wide" data-focus="map" data-kicker="The state">
+        <article class="cine-scene is-fly is-on" id="scene-state" data-place="va" data-metric="zhvi" data-select="none" data-camera="wide" data-stage="map" data-kicker="The state">
           <p class="cine-chap">01 · Establishing</p>
           <h2>Virginia is not one housing market.</h2>
           <p>Color is a typical home, live from Zillow, for every county and independent city. The spread is the story. Scroll — the camera goes in.</p>
         </article>
 
-        <article class="cine-scene is-fly" id="scene-peak" data-place="va" data-metric="zhvi" data-select="51610" data-camera="tight" data-dim="story" data-focus="map" data-kicker="The ceiling">
+        <article class="cine-scene is-fly" id="scene-peak" data-place="va" data-metric="zhvi" data-select="51610" data-camera="tight" data-dim="story" data-stage="map" data-kicker="The ceiling">
           <p class="cine-chap">02 · Falls Church</p>
           <h2>The ceiling is a city you can miss on the map.</h2>
           <p>Falls Church. Independent city, Northern Virginia. A typical home here is the top of this commonwealth — over a million dollars — packed into a shape smaller than a county label.</p>
         </article>
 
-        <article class="cine-scene is-fly" id="scene-floor" data-place="va" data-metric="zhvi" data-select="51027" data-camera="tight" data-dim="story" data-focus="map" data-kicker="The floor">
+        <article class="cine-scene is-fly" id="scene-floor" data-place="va" data-metric="zhvi" data-select="51027" data-camera="tight" data-dim="story" data-stage="map" data-kicker="The floor">
           <p class="cine-chap">03 · Buchanan</p>
           <h2>Drive west. Same state. One-fifteenth the house.</h2>
           <p>Buchanan County, coalfields. The cheapest typical home on this map. Nothing about the color scale was decoration: it was this distance.</p>
         </article>
 
-        <article class="cine-scene is-fly" id="scene-spread" data-place="va" data-metric="zhvi" data-select="51610" data-pair="51027" data-camera="wide" data-dim="story" data-focus="map" data-kicker="The spread">
+        <article class="cine-scene is-fly" id="scene-spread" data-place="va" data-metric="zhvi" data-select="51610" data-pair="51027" data-camera="wide" data-dim="story" data-stage="map" data-kicker="The spread">
           <p class="cine-chap">04 · Pull back</p>
           <h2>Fifteen times apart, still one commonwealth.</h2>
           <p>The camera lets go. Two marks. Falls Church and Buchanan stay lit. Everyone else recedes. This is the range a “Virginia home” has to mean.</p>
         </article>
 
-        <article class="cine-scene is-fly" id="scene-fairfax" data-place="va" data-metric="zhvi" data-select="51059" data-camera="medium" data-dim="story" data-focus="map" data-kicker="The bet">
+        <article class="cine-scene is-fly" id="scene-fairfax" data-place="va" data-metric="zhvi" data-select="51059" data-camera="medium" data-dim="story" data-stage="map" data-kicker="The bet">
           <p class="cine-chap">05 · Fairfax</p>
           <h2>Most of the expensive story sits here.</h2>
           <p>Fairfax County is not the peak and not the floor. It is Northern Virginia’s typical home — live ZHVI, this month — the place the rest of the film holds on.</p>
         </article>
 
-        <article class="cine-scene is-fly" id="scene-years" data-place="va" data-metric="years_rent" data-select="51059" data-camera="medium" data-dim="story" data-focus="map" data-kicker="Years, not dollars">
+        <article class="cine-scene is-fly" id="scene-years" data-place="va" data-metric="years_rent" data-select="51059" data-camera="medium" data-dim="story" data-stage="map" data-kicker="Years, not dollars">
           <p class="cine-chap">06 · The ratio</p>
           <h2>The house is years of rent, stacked.</h2>
           <p>Same county, new color: typical home ÷ (typical rent × 12). Fairfax costs about twenty-five years of asking rent. The map is no longer dollars. It is time.</p>
         </article>
 
-        <article class="cine-scene" id="scene-walk" data-place="va" data-metric="years_rent" data-select="51059" data-camera="medium" data-dim="story" data-focus="time" data-play="1" data-kicker="Ten years">
+        <article class="cine-scene" id="scene-walk" data-place="va" data-metric="years_rent" data-select="51059" data-camera="medium" data-dim="story" data-stage="walk" data-play="1" data-kicker="Ten years">
           <p class="cine-chap">07 · The walk</p>
           <h2>Watch Fairfax climb the 25-year diagonal.</h2>
-          <p>Each year is a step in rent × price space — not another choropleth. The dashed lines are 15, 25, 35 years of rent to buy. Play the decade. The path is the argument.</p>
+          <p>The map leaves the frame. Each year is a step in rent × price space. The dashed lines are 15, 25, 35 years of rent to buy. Play the decade. The path is the argument.</p>
         </article>
 
-        <article class="cine-scene" id="scene-cone" data-place="va" data-metric="zhvi" data-select="51059" data-camera="medium" data-dim="story" data-focus="time" data-kicker="What next year may say">
+        <article class="cine-scene" id="scene-cone" data-place="va" data-metric="zhvi" data-select="51059" data-camera="medium" data-dim="story" data-stage="cone" data-kicker="What next year may say">
           <p class="cine-chap">08 · The cone</p>
           <h2>Next year is a forecast. 2031 is not.</h2>
           <p>Year 1 of the home cone is Zillow’s metro call for Washington, DC — not Washington, Indiana. After that the last decade continues, ± a year’s volatility. A trend, held out. Not a priced model.</p>
         </article>
 
-        <article class="cine-scene is-fly" id="scene-cut" data-place="mumbai" data-metric="asr_psf" data-select="none" data-camera="wide" data-focus="map" data-kicker="Cut">
+        <article class="cine-scene is-fly" id="scene-cut" data-place="mumbai" data-metric="asr_psf" data-select="none" data-camera="wide" data-stage="map" data-kicker="Cut">
           <p class="cine-chap">09 · Cut</p>
           <h2>Mumbai does not publish that walk.</h2>
           <p>No 10-year ward price. No official locality rent. What exists is a stamp-duty floor for 24 BMC wards — the ready reckoner — and a census of who was counted in 2011. The camera changes cities.</p>
         </article>
 
-        <article class="cine-scene is-fly" id="scene-east" data-place="mumbai" data-metric="asr_psf" data-select="M/E" data-camera="tight" data-dim="story" data-focus="map" data-kicker="The east">
+        <article class="cine-scene is-fly" id="scene-east" data-place="mumbai" data-metric="asr_psf" data-select="M/E" data-camera="tight" data-dim="story" data-stage="map" data-kicker="The east">
           <p class="cine-chap">10 · M East</p>
           <h2>Start where the floor is low and the count is high.</h2>
           <p>M East, eastern suburbs. Ready reckoner, not a listing. A cheap stamp-duty floor on a ward that held a lot of households in 2011.</p>
         </article>
 
-        <article class="cine-scene is-fly" id="scene-hill" data-place="mumbai" data-metric="asr_psf" data-select="D" data-camera="tight" data-dim="story" data-focus="map" data-kicker="The island peak">
+        <article class="cine-scene is-fly" id="scene-hill" data-place="mumbai" data-metric="asr_psf" data-select="D" data-camera="tight" data-dim="story" data-stage="map" data-kicker="The island peak">
           <p class="cine-chap">11 · Malabar Hill</p>
           <h2>Same instrument. The top of 24.</h2>
           <p>Ward D. Malabar Hill. The camera crossed the harbour. The ready reckoner did not change method. The floor did.</p>
         </article>
 
-        <article class="cine-scene is-fly" id="scene-flat" data-place="mumbai" data-metric="floor_1000" data-select="D" data-pair="M/E" data-camera="pair" data-dim="story" data-focus="about" data-kicker="A flat">
+        <article class="cine-scene is-fly" id="scene-flat" data-place="mumbai" data-metric="floor_1000" data-select="D" data-pair="M/E" data-camera="pair" data-dim="story" data-stage="map" data-kicker="A flat">
           <p class="cine-chap">12 · Two homes</p>
           <h2>Not a hectare. A thousand square feet.</h2>
-          <p>Both marks stay. Color is the ready-reckoner value of 1,000 carpet ft². Years of city 2BHK rent to cover that floor — city rent, ward floor — sit in the card. That is the Mumbai version of the Virginia ratio.</p>
+          <p>Both marks stay. Color is the ready-reckoner value of 1,000 carpet ft². That is the Mumbai version of the Virginia ratio — a home, not a hectare.</p>
         </article>
 
-        <article class="cine-scene" id="scene-stock" data-place="mumbai" data-metric="households" data-select="M/E" data-pair="D" data-camera="wide" data-dim="story" data-focus="time" data-kicker="Who was counted">
-          <p class="cine-chap">13 · Stock</p>
+        <article class="cine-scene" id="scene-ladder" data-place="mumbai" data-metric="asr_psf" data-select="D" data-pair="M/E" data-camera="wide" data-dim="story" data-stage="ladder" data-kicker="The 24 floors">
+          <p class="cine-chap">13 · Ladder</p>
+          <h2>Now the ready reckoner, as a ranking.</h2>
+          <p>The map sits down. Twenty-four stamp-duty floors, tallest first. Malabar Hill at the top. M East in the cheap half. This is the document, not the geography.</p>
+        </article>
+
+        <article class="cine-scene" id="scene-stock" data-place="mumbai" data-metric="households" data-select="M/E" data-pair="D" data-camera="wide" data-dim="story" data-stage="stock" data-kicker="Who was counted">
+          <p class="cine-chap">14 · Stock</p>
           <h2>The people on this map are from 2011.</h2>
           <p>Households versus the floor. Density is not where the stamp is highest. Island city in clay, suburbs in sage. Old, official, not weather.</p>
         </article>
 
-        <article class="cine-scene" id="scene-coda" data-place="va" data-metric="years_rent" data-select="51059" data-camera="wide" data-focus="map" data-kicker="Your turn">
-          <p class="cine-chap">14 · Coda</p>
+        <article class="cine-scene" id="scene-coda" data-place="va" data-metric="years_rent" data-select="51059" data-camera="wide" data-stage="map" data-kicker="Your turn">
+          <p class="cine-chap">15 · Coda</p>
           <h2>The camera lets you drive.</h2>
-          <p>Chips, search, hold-to-compare, click any shape. Virginia years of rent, or Mumbai’s floor. j / k still jumps chapters. The film stops choosing the frame.</p>
+          <p>Search, chips, hold-to-compare, click any shape. Virginia years of rent, or jump to Mumbai. j / k still jumps chapters. The film stops choosing the frame.</p>
         </article>
       </div>
     </div>
 
-    <footer class="ticker">
-      <span class="ticker-tag">Note</span>
-      <p id="ticker-line">Browser fetches Zillow and Census. No keys on the page.</p>
-    </footer>
+    <p id="ticker-line" class="film-credit">Browser fetches Zillow and Census. No keys on the page.</p>
   </div>
 
   <div id="mc-tooltip" class="mc-tooltip" role="tooltip" hidden></div>
 
   <script src="https://d3js.org/d3.v7.min.js"></script>
-  <script src="assets/js/housing-maps.js?v=cine-3"></script>
-  <script src="assets/js/housing-path.js?v=cine-3"></script>
-  <script src="assets/js/housing-live.js?v=cine-3"></script>
-  <script src="assets/js/housing.js?v=cine-3"></script>
-  <script src="assets/js/housing-cine.js?v=cine-3"></script>
+  <script src="assets/js/housing-maps.js?v=film-1"></script>
+  <script src="assets/js/housing-path.js?v=film-1"></script>
+  <script src="assets/js/housing-live.js?v=film-1"></script>
+  <script src="assets/js/housing.js?v=film-1"></script>
+  <script src="assets/js/housing-cine.js?v=film-1"></script>
 </body>
 </html>

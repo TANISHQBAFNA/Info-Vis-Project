@@ -7,12 +7,33 @@
 (function (global) {
   "use strict";
 
-  const INK = "#2c2824";
-  const MUTED = "#7a7168";
-  const HOME = "#9c5a4e";
-  const RENT = "#7d9a86";
   const FONT = '"Source Sans 3", "Segoe UI", sans-serif';
+  let INK = "#2c2824";
+  let MUTED = "#7a7168";
+  let HOME = "#9c5a4e";
+  let RENT = "#7d9a86";
+  let GRID = "#e0d6c8";
+  let PEER = "#cfc3b3";
   const parseDate = d3.timeParse("%Y-%m-%d");
+
+  function useTheme() {
+    const dark = document.body.classList.contains("cine-page");
+    if (dark) {
+      INK = "#f4ece2";
+      MUTED = "#9a9086";
+      HOME = "#c48962";
+      RENT = "#7d9a86";
+      GRID = "#3d372f";
+      PEER = "#4a433c";
+    } else {
+      INK = "#2c2824";
+      MUTED = "#7a7168";
+      HOME = "#9c5a4e";
+      RENT = "#7d9a86";
+      GRID = "#e0d6c8";
+      PEER = "#cfc3b3";
+    }
+  }
 
   function sizeOf(id, minH) {
     const el = document.getElementById(id);
@@ -109,6 +130,7 @@
   }
 
   function drawWalk(opts) {
+    useTheme();
     const { el, width, height } = sizeOf("path-walk", 300);
     if (!el) return;
     const row = opts.row;
@@ -149,7 +171,7 @@
       g.append("line")
         .attr("x1", x(p0[0])).attr("y1", y(p0[1]))
         .attr("x2", x(p1[0])).attr("y2", y(p1[1]))
-        .attr("stroke", "#e0d6c8").attr("stroke-dasharray", "3 4").attr("stroke-width", 1);
+        .attr("stroke", GRID).attr("stroke-dasharray", "3 4").attr("stroke-width", 1);
       g.append("text")
         .attr("x", x(p1[0]) - 4).attr("y", y(p1[1]) + 10)
         .attr("text-anchor", "end").attr("fill", MUTED).attr("font-size", 10).attr("font-family", FONT)
@@ -175,7 +197,7 @@
       .join("circle")
       .attr("class", "peer")
       .attr("cx", (d) => x(d.rent)).attr("cy", (d) => y(d.home))
-      .attr("r", 2.4).attr("fill", "#cfc3b3").attr("opacity", 0.7);
+      .attr("r", 2.4).attr("fill", PEER).attr("opacity", 0.7);
 
     const line = d3.line().x((d) => x(d.rent)).y((d) => y(d.home)).curve(d3.curveCatmullRom.alpha(0.5));
 
@@ -200,8 +222,8 @@
       .attr("class", "step")
       .attr("cx", (d) => x(d.rent)).attr("cy", (d) => y(d.home))
       .attr("r", (d, i) => i === yearIndex ? 6 : (i === walk.length - 1 ? 4 : 3))
-      .attr("fill", (d, i) => i > yearIndex ? "#e0d6c8" : col(d.year))
-      .attr("stroke", (d, i) => i === yearIndex ? INK : "#fffdf8").attr("stroke-width", 1)
+      .attr("fill", (d, i) => i > yearIndex ? GRID : col(d.year))
+      .attr("stroke", (d, i) => i === yearIndex ? INK : GRID).attr("stroke-width", 1)
       .style("cursor", "pointer")
       .on("click", (event, d) => {
         if (opts.onYear) opts.onYear(walk.indexOf(d));
@@ -248,6 +270,7 @@
   }
 
   function drawFan(opts) {
+    useTheme();
     const { el, width, height } = sizeOf("path-fan", 300);
     if (!el) return;
     const row = opts.row;
@@ -288,7 +311,7 @@
 
     const now = homeP.last.t || parseDate(homeP.last.date);
     g.append("line").attr("x1", x(now)).attr("x2", x(now)).attr("y1", 0).attr("y2", innerH)
-      .attr("stroke", "#e0d6c8").attr("stroke-width", 1);
+      .attr("stroke", GRID).attr("stroke-width", 1);
     g.append("text").attr("x", x(now) + 4).attr("y", 10)
       .attr("fill", MUTED).attr("font-size", 10).attr("font-family", FONT).text("now");
 
@@ -357,7 +380,8 @@
   }
 
   function drawMxLadder(opts) {
-    const { el, width, height } = sizeOf("path-walk", 300);
+    useTheme();
+    const { el, width, height } = sizeOf("path-ladder", 300);
     if (!el) return;
     const rows = (opts.rows || []).filter((r) => Number.isFinite(r.asr_psf))
       .slice().sort((a, b) => b.asr_psf - a.asr_psf);
@@ -418,7 +442,8 @@
   }
 
   function drawMxStock(opts) {
-    const { el, width, height } = sizeOf("path-fan", 300);
+    useTheme();
+    const { el, width, height } = sizeOf("path-stock", 300);
     if (!el) return;
     const rows = (opts.rows || []).filter((r) => Number.isFinite(r.asr_psf) && Number.isFinite(r.households));
     if (!rows.length) { empty(el, "Census households missing."); return; }
@@ -451,7 +476,7 @@
       .attr("r", (d) => d.id === opts.selectedId ? 7 : 4.5)
       .attr("fill", (d) => d.region === "Island City" ? HOME : RENT)
       .attr("opacity", (d) => d.id === opts.selectedId ? 1 : 0.8)
-      .attr("stroke", (d) => d.id === opts.selectedId ? INK : "#fffdf8")
+      .attr("stroke", (d) => d.id === opts.selectedId ? INK : GRID)
       .attr("stroke-width", (d) => d.id === opts.selectedId ? 1.4 : 0.8)
       .style("cursor", "pointer")
       .on("click", (event, d) => { if (opts.onSelect) opts.onSelect(d.id); })
@@ -477,8 +502,8 @@
 
   function styleAxis(sel) {
     sel.selectAll("text").attr("font-family", FONT).attr("fill", MUTED).attr("font-size", 10);
-    sel.selectAll("line, path").attr("stroke", "#e0d6c8");
-    sel.select(".domain").attr("stroke", "#e0d6c8");
+    sel.selectAll("line, path").attr("stroke", GRID);
+    sel.select(".domain").attr("stroke", GRID);
   }
 
   global.HousingPath = { drawWalk, drawFan, drawMxLadder, drawMxStock, project, yearly, alignedWalk };

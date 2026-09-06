@@ -40,6 +40,7 @@
     pairId: null,
     dim: null,
     kicker: "",
+    stage: "map",
     scrubIndex: null,
     camera: "wide",
     sources: null,
@@ -150,10 +151,20 @@
       this.dim = scene.dim || null;
       this.kicker = scene.kicker || "";
       this.camera = scene.camera || "wide";
+      this.stage = scene.stage || "map";
+      this.setStage(this.stage);
       this.render({ full: placeChanged, wipe: placeChanged, fly: !!(how && how.fly) });
       requestAnimationFrame(() => {
         this.drawMap({ fly: !!(how && how.fly) });
         this.drawTime();
+      });
+    },
+
+    setStage(stage) {
+      this.stage = stage || "map";
+      document.body.dataset.stage = this.stage;
+      document.querySelectorAll(".film-picture").forEach((el) => {
+        el.classList.toggle("is-on", el.getAttribute("data-stage") === this.stage);
       });
     },
 
