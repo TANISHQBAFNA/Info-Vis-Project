@@ -37,6 +37,9 @@
     metric: "zhvi",
     selectedId: DEFAULTS.va,
     compareId: null,
+    pairId: null,
+    dim: null,
+    kicker: "",
     scrubIndex: null,
     camera: "wide",
     sources: null,
@@ -76,8 +79,8 @@
       const dash = document.querySelector(".dashboard");
       if (dash) dash.hidden = false;
       this.bind();
-      this.render({ full: true });
       if (global.HousingCine && HousingCine.bind) HousingCine.bind(this);
+      else this.render({ full: true });
     },
 
     pack() { return this.place === "va" ? this.va : this.mx; },
@@ -86,6 +89,7 @@
     idKey() { return this.place === "va" ? "fips" : "id"; },
     selected() {
       const key = this.idKey();
+      if (!this.selectedId) return null;
       return this.rows().find((r) => String(r[key]) === String(this.selectedId)) || this.rows()[0];
     },
     metricDef() {
@@ -118,12 +122,13 @@
       const key = this.idKey();
       if (!this.rows().some((r) => String(r[key]) === String(id))) return;
       this.selectedId = id;
-      this.camera = "focus";
+      this.camera = "tight";
+      this.dim = "story";
       this.scrubIndex = null;
-      this.render();
+      this.render({ fly: true });
     },
 
-    applyScene(scene) {
+    applyScene(scene, how) {
       if (!scene) return;
       const placeChanged = scene.place && scene.place !== this.place;
       if (placeChanged) {
@@ -133,17 +138,21 @@
         if (this._playTimer) {
           this._playTimer.stop();
           this._playTimer = null;
+          this.syncPlayBtn && this.syncPlayBtn();
         }
-        if (!scene.select) this.selectedId = DEFAULTS[this.place];
       }
       if (scene.metric && METRICS[this.place] && METRICS[this.place].some((m) => m.id === scene.metric)) {
         this.metric = scene.metric;
       }
-      if (scene.select) this.selectedId = scene.select;
-      this.camera = scene.camera || "focus";
-      this.render({ full: placeChanged, wipe: placeChanged });
+      if (scene.select === "none" || scene.select === "") this.selectedId = null;
+      else if (scene.select) this.selectedId = scene.select;
+      this.pairId = scene.pair || null;
+      this.dim = scene.dim || null;
+      this.kicker = scene.kicker || "";
+      this.camera = scene.camera || "wide";
+      this.render({ full: placeChanged, wipe: placeChanged, fly: !!(how && how.fly) });
       requestAnimationFrame(() => {
-        this.drawMap();
+        this.drawMap({ fly: !!(how && how.fly) });
         this.drawTime();
       });
     },
@@ -331,14 +340,23 @@
       if (!el) return;
       const w = this.selected();
       const m = this.metricDef();
-      if (!w || !m || !global.HousingMaps) {
+      if (!m || !global.HousingMaps) {
         el.innerHTML = "";
         return;
       }
+      const kicker = this.kicker || (this.place === "va" ? "Virginia" : "Mumbai");
+      let name = w ? w.name : (this.place === "va" ? "Virginia · 133 counties" : "Mumbai · 24 wards");
+      let value;
+      if (w) value = HousingMaps.fmt(w[m.id], m.kind);
+      else {
+        const vals = this.rows().map((r) => +r[m.id]).filter(Number.isFinite);
+        value = HousingMaps.fmt(d3.median(vals), m.kind);
+      }
       el.innerHTML =
-        `<p class="cine-hero-place">${esc(w.name)}</p>` +
+        `<p class="cine-hero-kicker">${esc(kicker)}</p>` +
+        `<p class="cine-hero-place">${esc(name)}</p>` +
         `<p class="cine-hero-metric">${esc(m.label)}</p>` +
-        `<p class="cine-hero-value">${HousingMaps.fmt(w[m.id], m.kind)}</p>`;
+        `<p class="cine-hero-value">${value}</p>`;
     },
 
     renderMetrics() {
@@ -391,7 +409,15 @@
       const feed = document.getElementById("about-feed");
       const title = document.getElementById("about-title");
       const stamp = document.getElementById("about-stamp");
-      if (!w || !feed) return;
+      if (!feed) return;
+      if (!w) {
+        if (title) title.textContent = this.place === "va" ? "Virginia" : "Mumbai";
+        if (stamp) stamp.textContent = "Establishing shot";
+        feed.innerHTML = this.place === "va"
+          ? `<p class="intel-lede">133 counties and independent cities. Color is Zillow’s typical home (ZHVI), live. Scroll to go in — the ceiling, then the floor, then the county that holds most of the expensive story.</p>`
+          : `<p class="intel-lede">24 BMC wards. Color is the IGR ready-reckoner floor, not a sale. Scroll to the east suburbs, then the island peak.</p>`;
+        return;
+      }
       if (title) title.textContent = w.name;
       const m = this.metricDef();
       if (stamp) stamp.textContent = m.hint;
@@ -531,9 +557,13 @@
           metricLabel: m.label,
           selectedId: this.selectedId,
           compareId: this.compareId,
-          camera: this.camera || "focus",
+          pairId: this.pairId,
+          dim: this.dim,
+          camera: this.camera || "wide",
           force: !!opts.full,
           wipe: !!opts.wipe,
+          fly: !!opts.fly,
+          camT: opts.fly ? 1 : (global.HousingCine ? HousingCine.progress(HousingCine.scenes[HousingCine.i]) : 1),
           onSelect: (id) => this.select(id),
           tip: (event, html) => this.tip(html, event && event.clientX, event && event.clientY)
         });
@@ -560,6 +590,12 @@
             : "Left: rent×price path. Right: index 10y ago = 100. Cone is CAGR ± yearly volatility. Not a 5-year official forecast.";
         }
         try {
+          if (!w) {
+            const walkEl = document.getElementById("path-walk");
+            const fanEl = document.getElementById("path-fan");
+            if (walkEl) walkEl.innerHTML = "<p class=\"path-empty\">A county is not locked yet. The map is the state.</p>";
+            if (fanEl) fanEl.innerHTML = "";
+          } else {
           const cmp = this.compareId && this.rows().find((r) => String(r.fips) === String(this.compareId));
           HousingPath.drawWalk({
             row: w,
@@ -570,6 +606,7 @@
             tip
           });
           HousingPath.drawFan({ row: w, yearIndex: this.scrubIndex });
+          }
         } catch (err) {
           console.warn("time fail", err);
         }

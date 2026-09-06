@@ -1118,11 +1118,16 @@ body.cine-page[data-focus="about"] .cine-dock {
 }
 
 .cine-scene {
-  min-height: 92vh;
-  padding: 16vh 4px 28vh 0;
+  min-height: 88vh;
+  padding: 14vh 4px 22vh 0;
   opacity: 0.34;
   transform: translateY(10px);
   transition: opacity 0.45s ease, transform 0.45s ease;
+}
+
+.cine-scene.is-fly {
+  min-height: 132vh;
+  padding: 18vh 4px 36vh 0;
 }
 
 .cine-scene.is-on {
@@ -1191,6 +1196,7 @@ body.cine-page[data-focus="about"] .cine-dock {
   box-shadow: 0 8px 24px rgba(70, 52, 36, 0.08);
 }
 
+.cine-hero-kicker,
 .cine-hero-place,
 .cine-hero-metric {
   margin: 0;
@@ -1198,6 +1204,19 @@ body.cine-page[data-focus="about"] .cine-dock {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
+}
+
+.cine-hero-kicker {
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.cine-hero-place {
+  font-size: 12px;
+  color: var(--ink);
+  letter-spacing: 0.04em;
+  text-transform: none;
+  font-family: var(--font-display);
 }
 
 .cine-hero-metric {
@@ -1228,6 +1247,19 @@ body.cine-page[data-focus="about"] .cine-dock {
   outline: none;
   height: 40px;
   min-width: 0;
+}
+
+.map-callouts {
+  pointer-events: none;
+}
+
+body.cine-page:not(.is-coda) .kpis,
+body.cine-page:not(.is-coda) .metric-row {
+  display: none;
+}
+
+body.cine-page:not(.is-coda) .housing-command {
+  grid-template-columns: auto minmax(220px, 280px);
 }
 
 @media (max-width: 1100px) {
@@ -1262,6 +1294,10 @@ body.cine-page[data-focus="about"] .cine-dock {
   .cine-scene {
     min-height: 70vh;
     padding: 24px 0 48px;
+  }
+
+  .cine-scene.is-fly {
+    min-height: 92vh;
   }
 
   .cine-keys {

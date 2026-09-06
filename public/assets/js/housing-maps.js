@@ -1,6 +1,6 @@
 /**
  * Choropleth for Virginia counties and BMC wards.
- * Reuses the SVG on metric/selection change so fills tween instead of wiping.
+ * Camera is bounds-based (tight / medium / pair / wide) and can scrub with scroll.
  */
 (function (global) {
   "use strict";
@@ -63,10 +63,6 @@
       return d3.scaleLinear().domain([-maxAbs, 0, maxAbs])
         .range([COLORS[0], "#f4ece2", COLORS[3]]).clamp(true);
     }
-    if (kind === "aqi") {
-      return d3.scaleLinear().domain([0, 50, 100, 150, 200])
-        .range(["#7d9a86", "#cbb688", "#c48962", "#9c5a4e", "#6b3a34"]).clamp(true);
-    }
     return d3.scaleLinear().domain([domain[0], (domain[0] + domain[1]) / 2, domain[1]])
       .range([COLORS[0], COLORS[2], COLORS[3]]).clamp(true);
   }
@@ -76,7 +72,7 @@
   }
 
   function duration(ms) {
-    return reduceMotion() ? 0 : (ms == null ? 720 : ms);
+    return reduceMotion() ? 0 : (ms == null ? 1100 : ms);
   }
 
   function fillOf(d, byId, metric, color) {
@@ -85,46 +81,173 @@
     return Number.isFinite(v) ? color(v) : "#e0d6c8";
   }
 
-  function strokeOf(d, selectedId, compareId) {
+  function hotId(d, opts) {
     const id = String(d.id);
-    if (id === String(selectedId)) return INK;
-    if (compareId && id === String(compareId)) return "#8f5b4a";
+    return id === String(opts.selectedId) ||
+      (opts.pairId && id === String(opts.pairId)) ||
+      (opts.compareId && id === String(opts.compareId));
+  }
+
+  function strokeOf(d, opts) {
+    if (hotId(d, opts) && String(d.id) === String(opts.selectedId)) return INK;
+    if (hotId(d, opts)) return "#8f5b4a";
     return "#fffdf8";
   }
 
-  function strokeW(d, selectedId, compareId) {
-    const id = String(d.id);
-    if (id === String(selectedId)) return 1.9;
-    if (compareId && id === String(compareId)) return 1.6;
-    return 0.6;
+  function strokeW(d, opts) {
+    if (String(d.id) === String(opts.selectedId)) return 2.1;
+    if (hotId(d, opts)) return 1.7;
+    return 0.55;
   }
 
-  function spotlight(g, hoverId, selectedId, compareId) {
-    if (!g) return;
-    g.selectAll("path.unit").attr("opacity", (d) => {
-      const id = String(d.id);
-      if (!hoverId) return 1;
-      if (id === String(hoverId) || id === String(selectedId) || (compareId && id === String(compareId))) return 1;
-      return 0.2;
+  function dimOp(d, opts, hoverId) {
+    const hot = hotId(d, opts);
+    const hover = hoverId && String(d.id) === String(hoverId);
+    if (hover) return 1;
+    if (opts.dim === "story") return hot ? 1 : 0.14;
+    if (hoverId) return hot ? 1 : 0.2;
+    return 1;
+  }
+
+  function shortName(s) {
+    return String(s || "")
+      .replace(/ County$/i, "")
+      .replace(/ City$/i, "")
+      .replace(/^[A-Z0-9/]+ · /, "");
+  }
+
+  function applyView(g, view) {
+    g.attr("transform", "translate(" + view.tx + "," + view.ty + ")scale(" + view.k + ")");
+  }
+
+  function viewToZoom(view, width, height) {
+    const k = view.k || 1;
+    return [(width / 2 - view.tx) / k, (height / 2 - view.ty) / k, width / k];
+  }
+
+  function zoomToView(z, width, height) {
+    const k = width / z[2];
+    return { k: k, tx: width / 2 - k * z[0], ty: height / 2 - k * z[1] };
+  }
+
+  function viewFrom(path, geo, opts, width, height) {
+    const identity = { k: 1, tx: 0, ty: 0 };
+    const cam = opts.camera || "wide";
+    if (cam === "wide") return identity;
+    const ids = [];
+    if (opts.selectedId) ids.push(String(opts.selectedId));
+    if (cam === "pair" && opts.pairId) ids.push(String(opts.pairId));
+    const feats = ids.map((id) => geo.features.find((f) => String(f.id) === id)).filter(Boolean);
+    if (!feats.length) return identity;
+    let b = path.bounds(feats[0]);
+    feats.slice(1).forEach((f) => {
+      const bb = path.bounds(f);
+      b = [
+        [Math.min(b[0][0], bb[0][0]), Math.min(b[0][1], bb[0][1])],
+        [Math.max(b[1][0], bb[1][0]), Math.max(b[1][1], bb[1][1])]
+      ];
+    });
+    const bw = Math.max(6, b[1][0] - b[0][0]);
+    const bh = Math.max(6, b[1][1] - b[0][1]);
+    const pad = cam === "tight" ? 2.05 : cam === "medium" ? 3.4 : 1.28;
+    const maxK = cam === "tight" ? 16 : cam === "medium" ? 7 : 4;
+    let k = Math.min((width - 28) / (bw * pad), (height - 28) / (bh * pad));
+    k = Math.max(1.02, Math.min(k, maxK));
+    const cx = (b[0][0] + b[1][0]) / 2;
+    const cy = (b[0][1] + b[1][1]) / 2;
+    return { k: k, tx: width / 2 - k * cx, ty: height / 2 - k * cy };
+  }
+
+  function sameView(a, b) {
+    if (!a || !b) return false;
+    return Math.abs(a.k - b.k) < 0.02 && Math.abs(a.tx - b.tx) < 1 && Math.abs(a.ty - b.ty) < 1;
+  }
+
+  function placeCallouts(st) {
+    if (!st || !st.callouts) return;
+    const view = st.view || { k: 1, tx: 0, ty: 0 };
+    st.callouts.selectAll("g.callout").attr("transform", (d) => {
+      const x = d.c[0] * view.k + view.tx;
+      const y = d.c[1] * view.k + view.ty - 20;
+      return "translate(" + x + "," + y + ")";
     });
   }
 
-  function cameraTo(g, path, geo, opts, width, height) {
-    const dur = duration(opts.camera === "wide" ? 900 : 800);
-    const feat = geo.features.find((f) => String(f.id) === String(opts.selectedId));
-    if (!feat || opts.camera === "wide") {
-      g.transition().duration(dur).attr("transform", "translate(0,0)scale(1)");
+  function drawCallouts(st, opts, byId, geo) {
+    if (!st.callouts) return;
+    const ids = [opts.selectedId, opts.pairId, opts.compareId].filter((id, i, a) => id && a.indexOf(id) === i);
+    const data = ids.map((id) => {
+      const f = geo.features.find((x) => String(x.id) === String(id));
+      const row = byId.get(String(id));
+      if (!f || !row) return null;
+      const c = st.path.centroid(f);
+      if (!c || !Number.isFinite(c[0])) return null;
+      return { id: String(id), c: c, name: shortName(row.label || row.name), value: fmt(row[opts.metric], opts.kind) };
+    }).filter(Boolean);
+
+    const sel = st.callouts.selectAll("g.callout").data(data, (d) => d.id);
+    const enter = sel.enter().append("g").attr("class", "callout");
+    enter.append("rect").attr("class", "callout-bg").attr("fill", "rgba(255,253,248,0.92)")
+      .attr("stroke", "#cfc3b3").attr("stroke-width", 1).attr("rx", 7);
+    enter.append("text").attr("class", "callout-name")
+      .attr("fill", "#7a7168").attr("font-size", 10)
+      .attr("font-family", '"Source Sans 3","Segoe UI",sans-serif')
+      .attr("x", 0).attr("y", 0);
+    enter.append("text").attr("class", "callout-val")
+      .attr("fill", INK).attr("font-size", 15).attr("font-weight", 600)
+      .attr("font-family", 'Fraunces,"Times New Roman",serif')
+      .attr("x", 0).attr("y", 16);
+    const all = enter.merge(sel);
+    all.select(".callout-name").text((d) => d.name);
+    all.select(".callout-val").text((d) => d.value);
+    all.each(function () {
+      const n = this.querySelector(".callout-name");
+      const v = this.querySelector(".callout-val");
+      const w = Math.max(n.getComputedTextLength(), v.getComputedTextLength()) + 18;
+      d3.select(this).select(".callout-bg")
+        .attr("x", -9).attr("y", -13).attr("width", w).attr("height", 36);
+    });
+    sel.exit().remove();
+    placeCallouts(st);
+  }
+
+  function setInterp(st, to, width, height) {
+    const from = st.view || { k: 1, tx: 0, ty: 0 };
+    st.from = from;
+    st.to = to;
+    st.camInterp = d3.interpolateZoom(viewToZoom(from, width, height), viewToZoom(to, width, height));
+  }
+
+  function cameraScrub(t) {
+    const el = document.getElementById("choropleth");
+    const st = el && el._map;
+    if (!st || !st.camInterp) return;
+    const u = Math.max(0, Math.min(1, t));
+    const view = zoomToView(st.camInterp(u), st.width, st.height);
+    st.g.interrupt();
+    applyView(st.g, view);
+    st.view = view;
+    placeCallouts(st);
+  }
+
+  function cameraFly(st, to, width, height, ms) {
+    const dur = duration(ms);
+    if (reduceMotion() || dur === 0 || sameView(st.view, to)) {
+      applyView(st.g, to);
+      st.view = to;
+      setInterp(st, to, width, height);
+      placeCallouts(st);
       return;
     }
-    const c = path.centroid(feat);
-    if (!c || !Number.isFinite(c[0]) || !Number.isFinite(c[1])) {
-      g.transition().duration(dur).attr("transform", "translate(0,0)scale(1)");
-      return;
-    }
-    const k = 1.16;
-    const tx = width / 2 - k * c[0];
-    const ty = (height - 28) / 2 - k * c[1];
-    g.transition().duration(dur).attr("transform", "translate(" + tx + "," + ty + ")scale(" + k + ")");
+    setInterp(st, to, width, height);
+    const interp = st.camInterp;
+    st.g.interrupt().transition().duration(dur).ease(d3.easeCubicInOut)
+      .tween("cam", () => (u) => {
+        const view = zoomToView(interp(u), width, height);
+        applyView(st.g, view);
+        st.view = view;
+        placeCallouts(st);
+      });
   }
 
   function legend(opts, domain) {
@@ -135,25 +258,53 @@
     const rampClass = opts.kind === "yoy" ? "ramp ramp-yoy" : "ramp";
     el.innerHTML =
       `<span class="${rampClass}"><i></i></span><span>${lo}</span><span>${hi}</span>` +
-      `<span>Hover to spotlight · click to lock</span>`;
+      `<span>Scroll zooms · click a shape</span>`;
   }
 
-  function bindUnit(sel, opts, byId, selectedId, compareId, g) {
+  function bindUnit(sel, opts, byId, g) {
     sel
       .style("cursor", "pointer")
       .on("click", (event, d) => {
         if (opts.onSelect) opts.onSelect(String(d.id));
       })
       .on("mousemove", (event, d) => {
-        spotlight(g, d.id, selectedId, compareId);
+        g.selectAll("path.unit").attr("opacity", (p) => dimOp(p, opts, d.id));
         const row = byId.get(String(d.id));
         if (!row || !opts.tip) return;
         opts.tip(event, `<strong>${row.label || row.name}</strong><br>${opts.metricLabel}: ${fmt(row[opts.metric], opts.kind)}`);
       })
       .on("mouseleave", () => {
-        spotlight(g, null, selectedId, compareId);
+        g.selectAll("path.unit").attr("opacity", (p) => dimOp(p, opts, null));
         if (opts.tip) opts.tip(null);
       });
+  }
+
+  function paint(st, opts, byId, geo, color, dur) {
+    const units = st.g.selectAll("path.unit").data(geo.features, (d) => d.id);
+    units.join(
+      (enter) => enter.append("path").attr("class", "unit").attr("d", st.path),
+      (update) => update,
+      (exit) => exit.remove()
+    );
+    const all = st.g.selectAll("path.unit");
+    all.transition().duration(dur)
+      .attr("fill", (d) => fillOf(d, byId, opts.metric, color))
+      .attr("stroke", (d) => strokeOf(d, opts))
+      .attr("stroke-width", (d) => strokeW(d, opts))
+      .attr("opacity", (d) => dimOp(d, opts, null));
+    bindUnit(all, opts, byId, st.g);
+    drawCallouts(st, opts, byId, geo);
+  }
+
+  function aim(st, opts, geo, width, height) {
+    const to = viewFrom(st.path, geo, opts, width, height);
+    const key = [opts.camera, opts.selectedId, opts.pairId || ""].join("|");
+    if (st.targetKey !== key) {
+      setInterp(st, to, width, height);
+      st.targetKey = key;
+    }
+    if (opts.fly) cameraFly(st, to, width, height, 1250);
+    else cameraScrub(opts.camT != null ? opts.camT : 1);
   }
 
   function draw(opts) {
@@ -162,14 +313,11 @@
     const geo = opts.geo;
     const rows = opts.rows || [];
     const key = opts.idKey;
-    const metric = opts.metric;
-    const selectedId = opts.selectedId;
-    const compareId = opts.compareId;
     const byId = new Map(rows.map((r) => [String(r[key]), r]));
-    const values = rows.map((r) => +r[metric]).filter(Number.isFinite);
+    const values = rows.map((r) => +r[opts.metric]).filter(Number.isFinite);
     const domain = values.length ? d3.extent(values) : [0, 1];
     const color = colorScale(values, opts.kind);
-    const dur = duration(opts.wipe ? 0 : 720);
+    const dur = duration(opts.wipe ? 0 : 640);
     const st = el._map;
     const sizeOk = st && Math.abs(st.width - width) < 10 && Math.abs(st.height - height) < 10;
     const reuse = st && st.place === opts.place && st.svg && el.querySelector("svg") && sizeOk && !opts.force;
@@ -177,27 +325,13 @@
     legend(opts, domain);
 
     if (reuse) {
-      const g = st.g;
       if (st.clip) st.clip.interrupt().attr("opacity", 1);
-      const units = g.selectAll("path.unit").data(geo.features, (d) => d.id);
-      units.join(
-        (enter) => enter.append("path").attr("class", "unit").attr("d", st.path),
-        (update) => update,
-        (exit) => exit.remove()
-      );
-      const all = g.selectAll("path.unit");
-      all.transition().duration(dur)
-        .attr("fill", (d) => fillOf(d, byId, metric, color))
-        .attr("stroke", (d) => strokeOf(d, selectedId, compareId))
-        .attr("stroke-width", (d) => strokeW(d, selectedId, compareId));
-      bindUnit(all, opts, byId, selectedId, compareId, g);
-      spotlight(g, null, selectedId, compareId);
-      if (opts.camera !== st.camera || String(selectedId) !== String(st.selectedId)) {
-        cameraTo(g, st.path, geo, opts, width, height);
-      }
-      st.metric = metric;
-      st.selectedId = selectedId;
-      st.compareId = compareId;
+      paint(st, opts, byId, geo, color, dur);
+      aim(st, opts, geo, width, height);
+      st.metric = opts.metric;
+      st.selectedId = opts.selectedId;
+      st.compareId = opts.compareId;
+      st.pairId = opts.pairId;
       st.camera = opts.camera;
       st.byId = byId;
       return;
@@ -218,38 +352,43 @@
 
     const clip = svg.append("g").attr("class", "map-clip").attr("clip-path", "url(#" + clipId + ")");
     const g = clip.append("g").attr("class", "units");
+    const callouts = svg.append("g").attr("class", "map-callouts");
 
     const units = g.selectAll("path.unit")
       .data(geo.features, (d) => d.id)
       .join("path")
       .attr("class", "unit")
       .attr("d", path)
-      .attr("fill", (d) => fillOf(d, byId, metric, color))
-      .attr("stroke", (d) => strokeOf(d, selectedId, compareId))
-      .attr("stroke-width", (d) => strokeW(d, selectedId, compareId));
-
-    bindUnit(units, opts, byId, selectedId, compareId, g);
+      .attr("fill", (d) => fillOf(d, byId, opts.metric, color))
+      .attr("stroke", (d) => strokeOf(d, opts))
+      .attr("stroke-width", (d) => strokeW(d, opts))
+      .attr("opacity", (d) => dimOp(d, opts, null));
+    bindUnit(units, opts, byId, g);
 
     if (!reduceMotion() && opts.wipe) {
-      clip.attr("opacity", 0).transition().duration(640).attr("opacity", 1);
+      clip.attr("opacity", 0).transition().duration(720).attr("opacity", 1);
     }
 
     el._map = {
       place: opts.place,
-      svg,
-      clip,
-      g,
-      path,
-      width,
-      height,
-      metric,
-      selectedId,
-      compareId,
+      svg: svg,
+      clip: clip,
+      g: g,
+      callouts: callouts,
+      path: path,
+      width: width,
+      height: height,
+      metric: opts.metric,
+      selectedId: opts.selectedId,
+      compareId: opts.compareId,
+      pairId: opts.pairId,
       camera: opts.camera,
-      byId
+      byId: byId,
+      view: { k: 1, tx: 0, ty: 0 }
     };
-    cameraTo(g, path, geo, opts, width, height);
+    drawCallouts(el._map, opts, byId, geo);
+    aim(el._map, opts, geo, width, height);
   }
 
-  global.HousingMaps = { draw, fmt, spark, COLORS };
+  global.HousingMaps = { draw, fmt, spark, COLORS, cameraScrub };
 })(window);

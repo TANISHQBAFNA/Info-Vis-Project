@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=cine-2">
+  <link rel="stylesheet" href="assets/css/style.css?v=cine-3">
 </head>
 <body class="housing-page cine-page">
   <div id="boot-screen">
@@ -97,82 +97,88 @@
       </div>
 
       <div class="cine-rail" id="cine-rail">
-        <article class="cine-scene is-on" id="scene-open" data-place="va" data-metric="zhvi" data-select="51059" data-camera="wide" data-focus="map">
-          <p class="cine-chap">01 · Virginia</p>
-          <h2>A house is years of rent, stacked.</h2>
-          <p>Fairfax starts the film. Typical home versus typical rent — one county, live Zillow, not a stock photo. Scroll. Map holds. Story advances.</p>
+        <article class="cine-scene is-fly is-on" id="scene-state" data-place="va" data-metric="zhvi" data-select="none" data-camera="wide" data-focus="map" data-kicker="The state">
+          <p class="cine-chap">01 · Establishing</p>
+          <h2>Virginia is not one housing market.</h2>
+          <p>Color is a typical home, live from Zillow, for every county and independent city. The spread is the story. Scroll — the camera goes in.</p>
         </article>
 
-        <article class="cine-scene" id="scene-zhvi" data-place="va" data-metric="zhvi" data-camera="focus" data-focus="map">
-          <p class="cine-chap">02 · Typical home</p>
-          <h2>What a home costs.</h2>
-          <p>Each shape is a Virginia county or independent city. Color is Zillow’s mid-tier ZHVI, fetched in the browser. Hover to spotlight. Click to lock the about panel.</p>
+        <article class="cine-scene is-fly" id="scene-peak" data-place="va" data-metric="zhvi" data-select="51610" data-camera="tight" data-dim="story" data-focus="map" data-kicker="The ceiling">
+          <p class="cine-chap">02 · Falls Church</p>
+          <h2>The ceiling is a city you can miss on the map.</h2>
+          <p>Falls Church. Independent city, Northern Virginia. A typical home here is the top of this commonwealth — over a million dollars — packed into a shape smaller than a county label.</p>
         </article>
 
-        <article class="cine-scene" id="scene-yield" data-place="va" data-metric="years_rent" data-camera="focus" data-focus="map">
-          <p class="cine-chap">03 · Years of rent</p>
-          <h2>How many years of rent equal the house.</h2>
-          <p>ZHVI ÷ (ZORI × 12). Same file, same month, no extra model. High years: home ran ahead of rent. Low years: rent already buys a lot of house.</p>
+        <article class="cine-scene is-fly" id="scene-floor" data-place="va" data-metric="zhvi" data-select="51027" data-camera="tight" data-dim="story" data-focus="map" data-kicker="The floor">
+          <p class="cine-chap">03 · Buchanan</p>
+          <h2>Drive west. Same state. One-fifteenth the house.</h2>
+          <p>Buchanan County, coalfields. The cheapest typical home on this map. Nothing about the color scale was decoration: it was this distance.</p>
         </article>
 
-        <article class="cine-scene" id="scene-zori" data-place="va" data-metric="zori" data-camera="focus" data-focus="map">
-          <p class="cine-chap">04 · Asking rent</p>
-          <h2>The rent itself.</h2>
-          <p>Zillow Observed Rent Index — asking rent for the typical unit, not HUD’s 2-bedroom FMR. HUD stays an overlay. Many Northern Virginia counties share one Washington HMFA number on purpose.</p>
+        <article class="cine-scene is-fly" id="scene-spread" data-place="va" data-metric="zhvi" data-select="51610" data-pair="51027" data-camera="wide" data-dim="story" data-focus="map" data-kicker="The spread">
+          <p class="cine-chap">04 · Pull back</p>
+          <h2>Fifteen times apart, still one commonwealth.</h2>
+          <p>The camera lets go. Two marks. Falls Church and Buchanan stay lit. Everyone else recedes. This is the range a “Virginia home” has to mean.</p>
         </article>
 
-        <article class="cine-scene" id="scene-heat" data-place="va" data-metric="heat" data-camera="focus" data-focus="map">
-          <p class="cine-chap">05 · Market</p>
-          <h2>How hot the listing.</h2>
-          <p>Market heat, days to pending, inventory, price cuts — live Zillow county series. Chips still work if you want a different cut. Map color tweens. It does not wipe.</p>
+        <article class="cine-scene is-fly" id="scene-fairfax" data-place="va" data-metric="zhvi" data-select="51059" data-camera="medium" data-dim="story" data-focus="map" data-kicker="The bet">
+          <p class="cine-chap">05 · Fairfax</p>
+          <h2>Most of the expensive story sits here.</h2>
+          <p>Fairfax County is not the peak and not the floor. It is Northern Virginia’s typical home — live ZHVI, this month — the place the rest of the film holds on.</p>
         </article>
 
-        <article class="cine-scene" id="scene-walk" data-place="va" data-metric="years_rent" data-camera="focus" data-focus="time" data-play="1">
-          <p class="cine-chap">06 · Ten-year walk</p>
-          <h2>Rent × price, year by year.</h2>
-          <p>Connected scatter, not another choropleth. Diagonals are 15 / 25 / 35 years of rent to buy. Scrub the year. Play draws the path. Hold a county to ghost a second walk.</p>
+        <article class="cine-scene is-fly" id="scene-years" data-place="va" data-metric="years_rent" data-select="51059" data-camera="medium" data-dim="story" data-focus="map" data-kicker="Years, not dollars">
+          <p class="cine-chap">06 · The ratio</p>
+          <h2>The house is years of rent, stacked.</h2>
+          <p>Same county, new color: typical home ÷ (typical rent × 12). Fairfax costs about twenty-five years of asking rent. The map is no longer dollars. It is time.</p>
         </article>
 
-        <article class="cine-scene" id="scene-fan" data-place="va" data-metric="zhvi" data-camera="focus" data-focus="time">
-          <p class="cine-chap">07 · Cone</p>
-          <h2>Index 10 years ago = 100, then a cone.</h2>
-          <p>Year 1 of the home fan is Zillow’s metro forecast (Fairfax → Washington, DC — not Washington, IN). Years 2–5 and all rent years are trailing CAGR ± 1σ. Trend, not a priced model.</p>
+        <article class="cine-scene" id="scene-walk" data-place="va" data-metric="years_rent" data-select="51059" data-camera="medium" data-dim="story" data-focus="time" data-play="1" data-kicker="Ten years">
+          <p class="cine-chap">07 · The walk</p>
+          <h2>Watch Fairfax climb the 25-year diagonal.</h2>
+          <p>Each year is a step in rent × price space — not another choropleth. The dashed lines are 15, 25, 35 years of rent to buy. Play the decade. The path is the argument.</p>
         </article>
 
-        <article class="cine-scene" id="scene-cut" data-place="mumbai" data-metric="asr_psf" data-select="M/E" data-camera="wide" data-focus="map">
-          <p class="cine-chap">08 · Cut</p>
-          <h2>Mumbai does not publish this walk.</h2>
-          <p>No official locality rent ₹/ft². No Residex JSON. No 10-year ward series. What exists: IGR ready reckoner — the stamp-duty floor — and Census 2011 stock. Film cuts. Map becomes 24 BMC wards.</p>
+        <article class="cine-scene" id="scene-cone" data-place="va" data-metric="zhvi" data-select="51059" data-camera="medium" data-dim="story" data-focus="time" data-kicker="What next year may say">
+          <p class="cine-chap">08 · The cone</p>
+          <h2>Next year is a forecast. 2031 is not.</h2>
+          <p>Year 1 of the home cone is Zillow’s metro call for Washington, DC — not Washington, Indiana. After that the last decade continues, ± a year’s volatility. A trend, held out. Not a priced model.</p>
         </article>
 
-        <article class="cine-scene" id="scene-asr" data-place="mumbai" data-metric="asr_psf" data-camera="focus" data-focus="map">
-          <p class="cine-chap">09 · Ready reckoner</p>
-          <h2>A floor, not a sale.</h2>
-          <p>ASR ₹/ft² is what Maharashtra uses for stamp. Usually below transacted price. M East is the default: cheaper floor, dense east suburbs. Click a ward. Ladder on the right ranks all 24.</p>
+        <article class="cine-scene is-fly" id="scene-cut" data-place="mumbai" data-metric="asr_psf" data-select="none" data-camera="wide" data-focus="map" data-kicker="Cut">
+          <p class="cine-chap">09 · Cut</p>
+          <h2>Mumbai does not publish that walk.</h2>
+          <p>No 10-year ward price. No official locality rent. What exists is a stamp-duty floor for 24 BMC wards — the ready reckoner — and a census of who was counted in 2011. The camera changes cities.</p>
         </article>
 
-        <article class="cine-scene" id="scene-peak" data-place="mumbai" data-metric="asr_psf" data-select="D" data-camera="focus" data-focus="map">
-          <p class="cine-chap">10 · Peak</p>
-          <h2>Malabar Hill is the ceiling of this map.</h2>
-          <p>Ward D is the 24-ward peak. Same ready-reckoner method, different island. Compare the 1,000 ft² floor and years of city 2BHK rent in the about card — city rent, ward floor.</p>
+        <article class="cine-scene is-fly" id="scene-east" data-place="mumbai" data-metric="asr_psf" data-select="M/E" data-camera="tight" data-dim="story" data-focus="map" data-kicker="The east">
+          <p class="cine-chap">10 · M East</p>
+          <h2>Start where the floor is low and the count is high.</h2>
+          <p>M East, eastern suburbs. Ready reckoner, not a listing. A cheap stamp-duty floor on a ward that held a lot of households in 2011.</p>
         </article>
 
-        <article class="cine-scene" id="scene-flat" data-place="mumbai" data-metric="floor_1000" data-camera="focus" data-focus="about">
-          <p class="cine-chap">11 · A flat</p>
-          <h2>Not a hectare. A home.</h2>
-          <p>650 ft² and 1,000 ft² ready-reckoner values, a 6% stamp illustration on 650 ft², years of Magicbricks city 2BHK rent to cover 1,000 ft². Derived from ASR. Not a listing scrape.</p>
+        <article class="cine-scene is-fly" id="scene-hill" data-place="mumbai" data-metric="asr_psf" data-select="D" data-camera="tight" data-dim="story" data-focus="map" data-kicker="The island peak">
+          <p class="cine-chap">11 · Malabar Hill</p>
+          <h2>Same instrument. The top of 24.</h2>
+          <p>Ward D. Malabar Hill. The camera crossed the harbour. The ready reckoner did not change method. The floor did.</p>
         </article>
 
-        <article class="cine-scene" id="scene-stock" data-place="mumbai" data-metric="households" data-camera="focus" data-focus="time">
-          <p class="cine-chap">12 · Stock</p>
-          <h2>Who was counted in 2011.</h2>
-          <p>Households versus ready-reckoner floor. Island city in clay, suburbs in sage. Dense cheap wards sit up and left; expensive island wards sit right. Census 2011 — old, official, not weather.</p>
+        <article class="cine-scene is-fly" id="scene-flat" data-place="mumbai" data-metric="floor_1000" data-select="D" data-pair="M/E" data-camera="pair" data-dim="story" data-focus="about" data-kicker="A flat">
+          <p class="cine-chap">12 · Two homes</p>
+          <h2>Not a hectare. A thousand square feet.</h2>
+          <p>Both marks stay. Color is the ready-reckoner value of 1,000 carpet ft². Years of city 2BHK rent to cover that floor — city rent, ward floor — sit in the card. That is the Mumbai version of the Virginia ratio.</p>
         </article>
 
-        <article class="cine-scene" id="scene-method" data-place="mumbai" data-metric="vs_peak" data-camera="wide" data-focus="about">
-          <p class="cine-chap">13 · Method</p>
-          <h2>How to read this.</h2>
-          <p>Green dots on chips are live CDN fetches. Redfin $/ft² and HUD FMR stay yearly overlays — the county file is too big for the browser; HUD USER xlsx is blocked. j / k or space advances. Map click still wins the selection until the next chapter that names a place.</p>
+        <article class="cine-scene" id="scene-stock" data-place="mumbai" data-metric="households" data-select="M/E" data-pair="D" data-camera="wide" data-dim="story" data-focus="time" data-kicker="Who was counted">
+          <p class="cine-chap">13 · Stock</p>
+          <h2>The people on this map are from 2011.</h2>
+          <p>Households versus the floor. Density is not where the stamp is highest. Island city in clay, suburbs in sage. Old, official, not weather.</p>
+        </article>
+
+        <article class="cine-scene" id="scene-coda" data-place="va" data-metric="years_rent" data-select="51059" data-camera="wide" data-focus="map" data-kicker="Your turn">
+          <p class="cine-chap">14 · Coda</p>
+          <h2>The camera lets you drive.</h2>
+          <p>Chips, search, hold-to-compare, click any shape. Virginia years of rent, or Mumbai’s floor. j / k still jumps chapters. The film stops choosing the frame.</p>
         </article>
       </div>
     </div>
@@ -186,10 +192,10 @@
   <div id="mc-tooltip" class="mc-tooltip" role="tooltip" hidden></div>
 
   <script src="https://d3js.org/d3.v7.min.js"></script>
-  <script src="assets/js/housing-maps.js?v=cine-2"></script>
-  <script src="assets/js/housing-path.js?v=cine-2"></script>
-  <script src="assets/js/housing-live.js?v=cine-2"></script>
-  <script src="assets/js/housing.js?v=cine-2"></script>
-  <script src="assets/js/housing-cine.js?v=cine-2"></script>
+  <script src="assets/js/housing-maps.js?v=cine-3"></script>
+  <script src="assets/js/housing-path.js?v=cine-3"></script>
+  <script src="assets/js/housing-live.js?v=cine-3"></script>
+  <script src="assets/js/housing.js?v=cine-3"></script>
+  <script src="assets/js/housing-cine.js?v=cine-3"></script>
 </body>
 </html>
