@@ -178,6 +178,7 @@
 
     if (reuse) {
       const g = st.g;
+      if (st.clip) st.clip.interrupt().attr("opacity", 1);
       const units = g.selectAll("path.unit").data(geo.features, (d) => d.id);
       units.join(
         (enter) => enter.append("path").attr("class", "unit").attr("d", st.path),
@@ -215,7 +216,7 @@
     const path = d3.geoPath(projection);
     projection.fitExtent([[12, 12], [width - 12, height - 12]], geo);
 
-    const clip = svg.append("g").attr("clip-path", "url(#" + clipId + ")");
+    const clip = svg.append("g").attr("class", "map-clip").attr("clip-path", "url(#" + clipId + ")");
     const g = clip.append("g").attr("class", "units");
 
     const units = g.selectAll("path.unit")
@@ -230,12 +231,13 @@
     bindUnit(units, opts, byId, selectedId, compareId, g);
 
     if (!reduceMotion() && opts.wipe) {
-      g.attr("opacity", 0).transition().duration(640).attr("opacity", 1);
+      clip.attr("opacity", 0).transition().duration(640).attr("opacity", 1);
     }
 
     el._map = {
       place: opts.place,
       svg,
+      clip,
       g,
       path,
       width,

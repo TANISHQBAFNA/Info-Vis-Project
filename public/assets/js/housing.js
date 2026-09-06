@@ -130,6 +130,10 @@
         this.place = scene.place;
         this.compareId = null;
         this.scrubIndex = null;
+        if (this._playTimer) {
+          this._playTimer.stop();
+          this._playTimer = null;
+        }
         if (!scene.select) this.selectedId = DEFAULTS[this.place];
       }
       if (scene.metric && METRICS[this.place] && METRICS[this.place].some((m) => m.id === scene.metric)) {
@@ -172,14 +176,16 @@
 
     playWalk() {
       if (this.place !== "va") return;
+      if (this._playTimer) {
+        this._playTimer.stop();
+        this._playTimer = null;
+        this.syncPlayBtn();
+        return;
+      }
       const w = this.selected();
       if (!global.HousingPath || !w) return;
       const walk = HousingPath.alignedWalk(w.zhviSeries, w.zoriSeries);
       if (walk.length < 3) return;
-      if (this._playTimer) {
-        this._playTimer.stop();
-        this._playTimer = null;
-      }
       const reduce = global.matchMedia && global.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (reduce) {
         this.scrubIndex = walk.length - 1;
@@ -199,12 +205,19 @@
           this.scrubIndex = walk.length - 1;
           this.drawTime();
           this.syncScrub();
+          this.syncPlayBtn();
           return;
         }
         this.scrubIndex = i;
         this.drawTime();
         this.syncScrub();
       }, 240);
+      this.syncPlayBtn();
+    },
+
+    syncPlayBtn() {
+      const btn = document.getElementById("btn-play-years");
+      if (btn) btn.textContent = this._playTimer ? "Pause" : "Play years";
     },
 
     syncScrub() {
