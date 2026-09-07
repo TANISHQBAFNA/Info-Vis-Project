@@ -32,18 +32,18 @@
 
     fillAll() {
       if (!this.dash) return;
-      document.querySelectorAll(".cine-scene").forEach((el) => this.fill(el));
+      document.querySelectorAll(".cine-scene").forEach((el) => this.fill(el, { chart: false }));
     },
 
     draw(sceneId) {
       if (!this.dash) return;
       const el = document.getElementById(sceneId);
       if (!el) return;
-      this.fill(el);
+      this.fill(el, { chart: true });
       this.lastId = sceneId;
     },
 
-    fill(el) {
+    fill(el, opts) {
       const panel = el.querySelector(".cine-panel");
       if (!panel) return;
       const spec = specFor(el.id, this.dash);
@@ -53,7 +53,7 @@
         `<div class="cine-inset"></div>` +
         (spec.take ? `<p class="cine-take">${esc(spec.take)}</p>` : "");
       const inset = panel.querySelector(".cine-inset");
-      if (inset && spec.chart) spec.chart(inset);
+      if (inset && spec.chart && !(opts && opts.chart === false)) spec.chart(inset);
     }
   };
 
@@ -358,6 +358,14 @@
     };
   }
 
+  function okPt(d) {
+    return d && d.t && !isNaN(+d.t) && isNum(d.v != null ? d.v : d.mid);
+  }
+
+  function okYr(p) {
+    return p && p.t && !isNaN(+p.t) && isNum(p.v);
+  }
+
   function isNum(v) {
     return v != null && v !== "" && Number.isFinite(+v);
   }
@@ -372,7 +380,9 @@
 
   function yearlyPts(row) {
     if (!row || !global.HousingPath) return [];
-    return HousingPath.yearly(row.zhviSeries).map((p) => ({ t: p.t, v: p.v, year: p.year }));
+    return HousingPath.yearly(row.zhviSeries)
+      .filter((p) => p.t && !isNaN(+p.t) && isNum(p.v))
+      .map((p) => ({ t: p.t, v: p.v, year: p.year }));
   }
 
   function indexPts(row) {
@@ -410,7 +420,7 @@
     const pad = { t: 14, r: 12, b: 28, l: 44 };
     const innerW = width - pad.l - pad.r;
     const innerH = height - pad.t - pad.b;
-    const pts = series.reduce((a, s) => a.concat(s.pts || []), []);
+    const pts = series.reduce((a, s) => a.concat((s.pts || []).filter(okPt)), []);
     if (pts.length < 2) {
       el.innerHTML = `<p class="path-empty">Not enough history for this inset.</p>`;
       return;
@@ -425,11 +435,12 @@
       ? (v) => d3.format(".0f")(v)
       : (v) => d3.format(".2s")(v);
     g.append("g").call(d3.axisLeft(y).ticks(4).tickFormat(yFmt)).call(axisStyle);
-    const ln = d3.line().x((d) => x(d.t)).y((d) => y(d.v)).curve(d3.curveMonotoneX);
+    const ln = d3.line().defined(okPt).x((d) => x(d.t)).y((d) => y(d.v)).curve(d3.curveMonotoneX);
     series.forEach((s) => {
-      if (!s.pts || s.pts.length < 2) return;
-      g.append("path").attr("d", ln(s.pts)).attr("fill", "none").attr("stroke", s.color || HOME).attr("stroke-width", 2);
-      const last = s.pts[s.pts.length - 1];
+      const sp = (s.pts || []).filter(okPt);
+      if (sp.length < 2) return;
+      g.append("path").attr("d", ln(sp)).attr("fill", "none").attr("stroke", s.color || HOME).attr("stroke-width", 2);
+      const last = sp[sp.length - 1];
       g.append("circle").attr("cx", x(last.t)).attr("cy", y(last.v)).attr("r", 3.2).attr("fill", s.color || HOME);
       if (series.length > 1) {
         g.append("text").attr("x", x(last.t) - 4).attr("y", y(last.v) - 8)
@@ -441,8 +452,8 @@
 
   function drawTwin(el, row) {
     if (!row) return drawSeries(el, [], {});
-    const home = HousingPath.yearly(row.zhviSeries);
-    const rent = HousingPath.yearly(row.zoriSeries);
+    const home = HousingPath.yearly(row.zhviSeries).filter(okYr);
+    const rent = HousingPath.yearly(row.zoriSeries).filter(okYr);
     if (home.length < 2) return drawSeries(el, [{ name: "ZHVI", pts: yearlyPts(row), color: HOME }], { kind: "usd" });
     const { width, height } = size(el, 168);
     const pad = { t: 16, r: 44, b: 28, l: 44 };
@@ -492,9 +503,13 @@
     const innerW = width - pad.l - pad.r;
     const innerH = height - pad.t - pad.b;
     const base = homeP.ago.v;
-    const hist = homeP.hist.map((p) => ({ t: p.t, v: 100 * p.mid / base }));
-    const fan = homeP.fan.map((p) => ({ t: p.t, mid: 100 * p.mid / base, lo: 100 * p.lo / base, hi: 100 * p.hi / base }));
-    const now = homeP.last.t;
+    const hist = homeP.hist.filter(okPt).map((p) => ({ t: p.t, v: 100 * p.mid / base }));
+    const fan = homeP.fan.filter((p) => p.t && !isNaN(+p.t)).map((p) => ({ t: p.t, mid: 100 * p.mid / base, lo: 100 * p.lo / base, hi: 100 * p.hi / base }));
+    const now = homeP.last.t || (homeP.last.date && new Date(homeP.last.date));
+    if (hist.length < 2 || !now || isNaN(+now)) {
+      el.innerHTML = `<p class="path-empty">Need ~18 months of ZHVI for a cone.</p>`;
+      return;
+    }
     const x = d3.scaleTime().domain(d3.extent(hist.concat(fan).map((d) => d.t))).range([0, innerW]);
     const y = d3.scaleLinear().domain(padExt(d3.extent(hist.map((d) => d.v).concat(fan.map((d) => d.hi))))).range([innerH, 0]);
     const svg = svgRoot(el, width, height);
