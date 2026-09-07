@@ -15,8 +15,12 @@
     return { el, width: Math.max(280, r.width), height: Math.max(minH || 360, r.height) };
   }
 
+  function isNum(v) {
+    return v != null && v !== "" && Number.isFinite(+v);
+  }
+
   function fmt(v, kind) {
-    if (!Number.isFinite(+v)) return "—";
+    if (!isNum(v)) return "—";
     const n = +v;
     if (kind === "usd") return "$" + d3.format(",.0f")(n);
     if (kind === "ppsf") return "$" + d3.format(",.0f")(n) + "/ft²";
@@ -97,8 +101,8 @@
     if (lyr === "navi") return "#4e6f62";
     if (lyr === "m3") return "#5c4e38";
     const row = byId.get(String(d.id));
-    const v = row ? +row[metric] : NaN;
-    return Number.isFinite(v) ? color(v) : "#2a2622";
+    const v = row && row[metric];
+    return isNum(v) ? color(+v) : "#2a2622";
   }
 
   function hotId(d, opts) {
@@ -312,7 +316,7 @@
         const row = byId.get(String(d.id));
         if (!row || !opts.tip) return;
         const v = row[opts.metric];
-        const line = Number.isFinite(+v)
+        const line = isNum(v)
           ? opts.metricLabel + ": " + fmt(v, opts.kind)
           : (row.note || row.region || "");
         opts.tip(event, `<strong>${row.label || row.name}</strong><br>${line}`);
@@ -361,7 +365,7 @@
     const rows = opts.rows || [];
     const key = opts.idKey;
     const byId = new Map(rows.map((r) => [String(r[key]), r]));
-    const values = rows.map((r) => +r[opts.metric]).filter(Number.isFinite);
+    const values = rows.map((r) => r[opts.metric]).filter(isNum).map(Number);
     const domain = values.length ? d3.extent(values) : [0, 1];
     const color = colorScale(values, opts.kind);
     const dur = duration(opts.wipe ? 0 : 640);

@@ -375,7 +375,7 @@
         if (Number.isFinite(w.zhvfYoy)) note = "Metro Y1 " + d3.format("+.1f")(w.zhvfYoy) + "% · " + (w.zhvfName || "");
       } else if (this.place === "mumbai" && this.camera === "bmc") {
         name = "Brihanmumbai · 24 wards";
-        const vals = this.rows().map((r) => +r[m.id]).filter(Number.isFinite);
+        const vals = this.rows().map((r) => r[m.id]).filter((v) => v != null && v !== "" && Number.isFinite(+v));
         value = HousingMaps.fmt(d3.median(vals), m.kind);
         note = "Stamp-duty floor. Two more cities sit east.";
       } else if (this.place === "mumbai" && (this.callouts || []).length) {
@@ -389,7 +389,7 @@
         value = "Your turn";
         note = "24 wards + NMMC + KSC New Town";
       } else {
-        const vals = this.rows().map((r) => +r[m.id]).filter(Number.isFinite);
+        const vals = this.rows().map((r) => r[m.id]).filter((v) => v != null && v !== "" && Number.isFinite(+v));
         value = HousingMaps.fmt(d3.median(vals), m.kind);
       }
       el.innerHTML =
@@ -424,7 +424,7 @@
       if (!row) return;
       const m = this.metricDef();
       const rows = this.rows();
-      const ranked = rows.filter((r) => Number.isFinite(+r[m.id]));
+      const ranked = rows.filter((r) => r[m.id] != null && r[m.id] !== "" && Number.isFinite(+r[m.id]));
       const vals = ranked.map((r) => +r[m.id]);
       const max = ranked.slice().sort((a, b) => (+b[m.id]) - (+a[m.id]))[0];
       const min = ranked.slice().sort((a, b) => (+a[m.id]) - (+b[m.id]))[0];
