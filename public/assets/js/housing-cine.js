@@ -161,6 +161,7 @@
       if (this.dash && this.dash.applyScene) {
         this.dash.applyScene(scene, { fly: !!(opts && opts.fly) });
       }
+      if (global.HousingRail && HousingRail.draw) HousingRail.draw(scene.id);
       if (!(opts && opts.fly)) this.scrubCamera();
       if (scene.play && !this.played[scene.id] && this.dash && this.dash.playWalk) {
         this.played[scene.id] = true;

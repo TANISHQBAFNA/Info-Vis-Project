@@ -81,6 +81,7 @@
       const dash = document.querySelector(".dashboard");
       if (dash) dash.hidden = false;
       this.bind();
+      if (global.HousingRail && HousingRail.bind) HousingRail.bind(this);
       if (global.HousingCine && HousingCine.bind) HousingCine.bind(this);
       else this.render({ full: true });
     },
@@ -291,7 +292,13 @@
       let t;
       window.addEventListener("resize", () => {
         clearTimeout(t);
-        t = setTimeout(() => { this.drawMap(); this.drawTime(); }, 160);
+        t = setTimeout(() => {
+          this.drawMap();
+          this.drawTime();
+          if (global.HousingCine && global.HousingRail && HousingCine.scenes[HousingCine.i]) {
+            HousingRail.draw(HousingCine.scenes[HousingCine.i].id);
+          }
+        }, 160);
       });
     },
 
