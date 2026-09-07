@@ -38,6 +38,7 @@
     if (kind === "pm") return d3.format(".0f")(n) + " µg/m³";
     if (kind === "temp") return d3.format(".1f")(n) + "°C";
     if (kind === "rain") return d3.format(".1f")(n) + " mm";
+    if (kind === "km2") return d3.format(",.0f")(n) + " km²";
     if (kind === "years") return d3.format(".1f")(n) + " yr";
     return d3.format(",.0f")(n);
   }
@@ -87,17 +88,26 @@
     return reduceMotion() ? 0 : (ms == null ? 1100 : ms);
   }
 
+  function layerOf(d) {
+    return (d.properties && d.properties.layer) || (String(d.id) === "NM" ? "navi" : String(d.id) === "M3" ? "m3" : "bmc");
+  }
+
   function fillOf(d, byId, metric, color) {
+    const lyr = layerOf(d);
+    if (lyr === "navi") return "#4e6f62";
+    if (lyr === "m3") return "#5c4e38";
     const row = byId.get(String(d.id));
     const v = row ? +row[metric] : NaN;
-    return Number.isFinite(v) ? color(v) : "#e0d6c8";
+    return Number.isFinite(v) ? color(v) : "#2a2622";
   }
 
   function hotId(d, opts) {
     const id = String(d.id);
+    const extra = opts.callouts || [];
     return id === String(opts.selectedId) ||
       (opts.pairId && id === String(opts.pairId)) ||
-      (opts.compareId && id === String(opts.compareId));
+      (opts.compareId && id === String(opts.compareId)) ||
+      extra.indexOf(id) >= 0;
   }
 
   function strokeOf(d, opts) {
@@ -128,6 +138,17 @@
       .replace(/^[A-Z0-9/]+ · /, "");
   }
 
+  function calloutValue(row, opts) {
+    if (row.layer === "navi") return fmt(row.pop, "count");
+    if (row.layer === "m3") return fmt(row.area_km2, "km2");
+    return fmt(row[opts.metric], opts.kind);
+  }
+
+  function orderedFeatures(geo) {
+    const rank = { m3: 0, navi: 1, bmc: 2 };
+    return (geo.features || []).slice().sort((a, b) => (rank[layerOf(a)] || 0) - (rank[layerOf(b)] || 0));
+  }
+
   function applyView(g, view) {
     g.attr("transform", "translate(" + view.tx + "," + view.ty + ")scale(" + view.k + ")");
   }
@@ -145,11 +166,16 @@
   function viewFrom(path, geo, opts, width, height) {
     const identity = { k: 1, tx: 0, ty: 0 };
     const cam = opts.camera || "wide";
-    if (cam === "wide") return identity;
-    const ids = [];
-    if (opts.selectedId) ids.push(String(opts.selectedId));
-    if (cam === "pair" && opts.pairId) ids.push(String(opts.pairId));
-    const feats = ids.map((id) => geo.features.find((f) => String(f.id) === id)).filter(Boolean);
+    if (cam === "metro" || cam === "wide") return identity;
+    let feats;
+    if (cam === "bmc") {
+      feats = geo.features.filter((f) => layerOf(f) === "bmc");
+    } else {
+      const ids = [];
+      if (opts.selectedId) ids.push(String(opts.selectedId));
+      if (cam === "pair" && opts.pairId) ids.push(String(opts.pairId));
+      feats = ids.map((id) => geo.features.find((f) => String(f.id) === id)).filter(Boolean);
+    }
     if (!feats.length) return identity;
     let b = path.bounds(feats[0]);
     feats.slice(1).forEach((f) => {
@@ -161,8 +187,8 @@
     });
     const bw = Math.max(6, b[1][0] - b[0][0]);
     const bh = Math.max(6, b[1][1] - b[0][1]);
-    const pad = cam === "tight" ? 2.05 : cam === "medium" ? 3.4 : 1.28;
-    const maxK = cam === "tight" ? 16 : cam === "medium" ? 7 : 4;
+    const pad = cam === "tight" ? 2.05 : cam === "medium" ? 3.4 : cam === "bmc" ? 1.22 : 1.28;
+    const maxK = cam === "tight" ? 16 : cam === "medium" ? 7 : cam === "bmc" ? 3.2 : 4;
     let k = Math.min((width - 28) / (bw * pad), (height - 28) / (bh * pad));
     k = Math.max(1.02, Math.min(k, maxK));
     const cx = (b[0][0] + b[1][0]) / 2;
@@ -187,14 +213,15 @@
 
   function drawCallouts(st, opts, byId, geo) {
     if (!st.callouts) return;
-    const ids = [opts.selectedId, opts.pairId, opts.compareId].filter((id, i, a) => id && a.indexOf(id) === i);
+    const ids = [opts.selectedId, opts.pairId, opts.compareId].concat(opts.callouts || [])
+      .filter((id, i, a) => id && a.indexOf(id) === i);
     const data = ids.map((id) => {
       const f = geo.features.find((x) => String(x.id) === String(id));
       const row = byId.get(String(id));
       if (!f || !row) return null;
       const c = st.path.centroid(f);
       if (!c || !Number.isFinite(c[0])) return null;
-      return { id: String(id), c: c, name: shortName(row.label || row.name), value: fmt(row[opts.metric], opts.kind) };
+      return { id: String(id), c: c, name: shortName(row.label || row.name), value: calloutValue(row, opts) };
     }).filter(Boolean);
 
     const sel = st.callouts.selectAll("g.callout").data(data, (d) => d.id);
@@ -284,7 +311,11 @@
         g.selectAll("path.unit").attr("opacity", (p) => dimOp(p, opts, d.id));
         const row = byId.get(String(d.id));
         if (!row || !opts.tip) return;
-        opts.tip(event, `<strong>${row.label || row.name}</strong><br>${opts.metricLabel}: ${fmt(row[opts.metric], opts.kind)}`);
+        const v = row[opts.metric];
+        const line = Number.isFinite(+v)
+          ? opts.metricLabel + ": " + fmt(v, opts.kind)
+          : (row.note || row.region || "");
+        opts.tip(event, `<strong>${row.label || row.name}</strong><br>${line}`);
       })
       .on("mouseleave", () => {
         g.selectAll("path.unit").attr("opacity", (p) => dimOp(p, opts, null));
@@ -293,7 +324,8 @@
   }
 
   function paint(st, opts, byId, geo, color, dur) {
-    const units = st.g.selectAll("path.unit").data(geo.features, (d) => d.id);
+    const feats = orderedFeatures(geo);
+    const units = st.g.selectAll("path.unit").data(feats, (d) => d.id);
     units.join(
       (enter) => enter.append("path").attr("class", "unit").attr("d", st.path),
       (update) => update,
@@ -302,8 +334,10 @@
     const all = st.g.selectAll("path.unit");
     all.transition().duration(dur)
       .attr("fill", (d) => fillOf(d, byId, opts.metric, color))
+      .attr("fill-opacity", (d) => layerOf(d) === "m3" ? 0.42 : 1)
       .attr("stroke", (d) => strokeOf(d, opts))
       .attr("stroke-width", (d) => strokeW(d, opts))
+      .attr("stroke-dasharray", (d) => layerOf(d) === "m3" ? "6 5" : null)
       .attr("opacity", (d) => dimOp(d, opts, null));
     bindUnit(all, opts, byId, st.g);
     drawCallouts(st, opts, byId, geo);
@@ -311,7 +345,7 @@
 
   function aim(st, opts, geo, width, height) {
     const to = viewFrom(st.path, geo, opts, width, height);
-    const key = [opts.camera, opts.selectedId, opts.pairId || ""].join("|");
+    const key = [opts.camera, opts.selectedId, opts.pairId || "", (opts.callouts || []).join(",")].join("|");
     if (st.targetKey !== key) {
       setInterp(st, to, width, height);
       st.targetKey = key;
@@ -368,13 +402,15 @@
     const callouts = svg.append("g").attr("class", "map-callouts");
 
     const units = g.selectAll("path.unit")
-      .data(geo.features, (d) => d.id)
+      .data(orderedFeatures(geo), (d) => d.id)
       .join("path")
       .attr("class", "unit")
       .attr("d", path)
       .attr("fill", (d) => fillOf(d, byId, opts.metric, color))
+      .attr("fill-opacity", (d) => layerOf(d) === "m3" ? 0.42 : 1)
       .attr("stroke", (d) => strokeOf(d, opts))
       .attr("stroke-width", (d) => strokeW(d, opts))
+      .attr("stroke-dasharray", (d) => layerOf(d) === "m3" ? "6 5" : null)
       .attr("opacity", (d) => dimOp(d, opts, null));
     bindUnit(units, opts, byId, g);
 

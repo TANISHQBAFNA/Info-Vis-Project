@@ -1,0 +1,28 @@
+{
+  "navi": {
+    "id": "NM",
+    "name": "Navi Mumbai · NMMC",
+    "label": "Navi Mumbai",
+    "places": "Vashi, Nerul, Belapur, Airoli, Kharghar and the other CIDCO nodes inside NMMC",
+    "layer": "navi",
+    "region": "Navi Mumbai",
+    "pop": 1119477,
+    "households": 277437,
+    "area_km2": 108.6,
+    "census_vintage": "Census 2011, Navi Mumbai M Corp.",
+    "note": "CIDCO planned city, 1971; NMMC 1992. Node-level IGR ready reckoner exists and is not compiled onto this map. Boundary: OSM relation 13180880 (ODbL)."
+  },
+  "m3": {
+    "id": "M3",
+    "name": "Mumbai 3.0 · KSC New Town",
+    "label": "Mumbai 3.0",
+    "places": "Karnala, Sai, Chirner — 124 villages in Panvel, Uran and Pen talukas, Raigad",
+    "layer": "m3",
+    "region": "Third Mumbai",
+    "area_km2": 323.44,
+    "villages": 124,
+    "pop": null,
+    "households": null,
+    "note": "MMRDA New Town Development Authority notified 15 Oct 2024. Surbana Jurong master plan commissioned 2026. Envelope on this map is schematic, not a cadastral NTDA sheet. No ready reckoner. Near Atal Setu, Navi Mumbai International Airport, JNPT."
+  }
+}

@@ -131,6 +131,7 @@
         metric: el.getAttribute("data-metric"),
         select: select,
         pair: el.getAttribute("data-pair") || null,
+        callouts: (el.getAttribute("data-callouts") || "").split(",").map((s) => s.trim()).filter(Boolean),
         camera: el.getAttribute("data-camera") || "wide",
         stage: el.getAttribute("data-stage") || "map",
         focus: el.getAttribute("data-focus") || "map",

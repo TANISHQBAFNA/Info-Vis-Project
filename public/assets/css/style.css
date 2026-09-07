@@ -1225,6 +1225,16 @@ body.cine-page .kpi-value { color: #f4ece2; }
   color: #fffdf8;
 }
 
+.cine-hero-note {
+  margin: 10px 0 0;
+  max-width: 22em;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a8278;
+  line-height: 1.45;
+}
+
 .cine-rail {
   padding-top: 12vh;
   padding-bottom: 20vh;

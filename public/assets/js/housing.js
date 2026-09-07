@@ -38,6 +38,7 @@
     selectedId: DEFAULTS.va,
     compareId: null,
     pairId: null,
+    callouts: [],
     dim: null,
     kicker: "",
     stage: "map",
@@ -148,6 +149,7 @@
       if (scene.select === "none" || scene.select === "") this.selectedId = null;
       else if (scene.select) this.selectedId = scene.select;
       this.pairId = scene.pair || null;
+      this.callouts = scene.callouts || [];
       this.dim = scene.dim || null;
       this.kicker = scene.kicker || "";
       this.camera = scene.camera || "wide";
@@ -356,18 +358,46 @@
         return;
       }
       const kicker = this.kicker || (this.place === "va" ? "Virginia" : "Mumbai");
-      let name = w ? w.name : (this.place === "va" ? "Virginia · 133 counties" : "Mumbai · 24 wards");
+      let name = w ? w.name : (this.place === "va" ? "Virginia · 133 counties" : "BMC · Navi Mumbai · Mumbai 3.0");
+      let metric = m.label;
       let value;
-      if (w) value = HousingMaps.fmt(w[m.id], m.kind);
-      else {
+      let note = "";
+      if (w && w.layer === "navi") {
+        metric = "Census 2011";
+        value = HousingMaps.fmt(w.pop, "count");
+        note = "CIDCO city · node ASR not mapped";
+      } else if (w && w.layer === "m3") {
+        metric = "Notified area";
+        value = HousingMaps.fmt(w.area_km2, "km2");
+        note = "124 villages · no ready reckoner";
+      } else if (w) {
+        value = HousingMaps.fmt(w[m.id], m.kind);
+        if (Number.isFinite(w.zhvfYoy)) note = "Metro Y1 " + d3.format("+.1f")(w.zhvfYoy) + "% · " + (w.zhvfName || "");
+      } else if (this.place === "mumbai" && this.camera === "bmc") {
+        name = "Brihanmumbai · 24 wards";
+        const vals = this.rows().map((r) => +r[m.id]).filter(Number.isFinite);
+        value = HousingMaps.fmt(d3.median(vals), m.kind);
+        note = "Stamp-duty floor. Two more cities sit east.";
+      } else if (this.place === "mumbai" && (this.callouts || []).length) {
+        name = "Island · Creek · Frontier";
+        metric = "Three Mumbais";
+        value = "BMC · NMMC · KSC";
+        note = "Only BMC has a ready reckoner on this map";
+      } else if (this.place === "mumbai") {
+        name = "BMC · Navi Mumbai · Mumbai 3.0";
+        metric = "Click a shape";
+        value = "Your turn";
+        note = "24 wards + NMMC + KSC New Town";
+      } else {
         const vals = this.rows().map((r) => +r[m.id]).filter(Number.isFinite);
         value = HousingMaps.fmt(d3.median(vals), m.kind);
       }
       el.innerHTML =
         `<p class="cine-hero-kicker">${esc(kicker)}</p>` +
         `<p class="cine-hero-place">${esc(name)}</p>` +
-        `<p class="cine-hero-metric">${esc(m.label)}</p>` +
-        `<p class="cine-hero-value">${value}</p>`;
+        `<p class="cine-hero-metric">${esc(metric)}</p>` +
+        `<p class="cine-hero-value">${value}</p>` +
+        (note ? `<p class="cine-hero-note">${esc(note)}</p>` : "");
     },
 
     renderMetrics() {
@@ -394,13 +424,14 @@
       if (!row) return;
       const m = this.metricDef();
       const rows = this.rows();
-      const vals = rows.map((r) => +r[m.id]).filter(Number.isFinite);
-      const max = rows.slice().sort((a, b) => (+b[m.id] || -1e12) - (+a[m.id] || -1e12))[0];
-      const min = rows.slice().sort((a, b) => (+a[m.id] || 1e12) - (+b[m.id] || 1e12))[0];
+      const ranked = rows.filter((r) => Number.isFinite(+r[m.id]));
+      const vals = ranked.map((r) => +r[m.id]);
+      const max = ranked.slice().sort((a, b) => (+b[m.id]) - (+a[m.id]))[0];
+      const min = ranked.slice().sort((a, b) => (+a[m.id]) - (+b[m.id]))[0];
       const med = d3.median(vals);
       const fmt = (v) => global.HousingMaps.fmt(v, m.kind);
       const cards = [
-        kpi("PLACES", rows.length, this.place === "va" ? "counties + cities" : "BMC wards"),
+        kpi("PLACES", this.place === "va" ? rows.length : "24 + 2", this.place === "va" ? "counties + cities" : "BMC · NMMC · 3.0"),
         kpi("HIGHEST", fmt(max && max[m.id]), max ? max.name : "—"),
         kpi("MEDIAN", fmt(med), m.label),
         kpi("LOWEST", fmt(min && min[m.id]), min ? min.name : "—")
@@ -426,7 +457,7 @@
         if (stamp) stamp.textContent = "Establishing shot";
         feed.innerHTML = this.place === "va"
           ? `<p class="intel-lede">133 counties and independent cities. Color is Zillow’s typical home (ZHVI), live. Scroll to go in — the ceiling, then the floor, then the county that holds most of the expensive story.</p>`
-          : `<p class="intel-lede">24 BMC wards. Color is the IGR ready-reckoner floor, not a sale. Scroll to the east suburbs, then the island peak.</p>`;
+          : `<p class="intel-lede">Three Mumbais. BMC has a stamp-duty floor. Navi Mumbai already has people. Mumbai 3.0 is a plan on 124 villages. The camera holds the city with a rate, then crosses the creek.</p>`;
         return;
       }
       if (title) title.textContent = w.name;
@@ -488,6 +519,28 @@
            </div>
            <p class="intel-body">HUD FMR is a bedroom rent, not per square foot. Many Northern Virginia counties share the Washington HMFA 2BR, so that layer looks flat on purpose. Closed-sale $/ft² has no Zillow county replacement (ZHVI PSF discontinued); Redfin’s county file is ~230 MB and cannot run in the browser.</p>
            <p class="combo-meta">${this.liveNoteVa()}</p>`;
+      } else if (w.layer === "navi") {
+        feed.innerHTML =
+          `<p class="intel-lede">${esc(w.places)}. CIDCO planned city (1971), NMMC 1992. Node-level IGR ready reckoner exists and is not compiled onto this map.</p>
+           <h3 class="feed-h">People, not a floor</h3>
+           <div class="stat-grid">
+             ${stat("Population", fmt(w.pop, "count"), w.census_vintage || "Census 2011")}
+             ${stat("Households", fmt(w.households, "count"), "NMMC")}
+             ${stat("Area", fmt(w.area_km2, "km2"), "NMMC")}
+           </div>
+           <p class="intel-body">${esc(w.note || "")}</p>
+           <p class="combo-meta">${this.liveNoteMx()}</p>`;
+      } else if (w.layer === "m3") {
+        feed.innerHTML =
+          `<p class="intel-lede">${esc(w.places)}. MMRDA New Town Development Authority, notified 15 Oct 2024. Envelope on this map is schematic, not a cadastral sheet.</p>
+           <h3 class="feed-h">A plan, not a rate</h3>
+           <div class="stat-grid">
+             ${stat("Notified area", fmt(w.area_km2, "km2"), "KSC New Town")}
+             ${stat("Villages", fmt(w.villages, "count"), "Panvel, Uran, Pen")}
+             ${stat("Ready reckoner", "—", "none yet")}
+           </div>
+           <p class="intel-body">${esc(w.note || "")}</p>
+           <p class="combo-meta">${this.liveNoteMx()}</p>`;
       } else {
         const city = this.mx && this.mx.city;
         feed.innerHTML =
@@ -538,6 +591,8 @@
       bits.push(census.vintage || "Census 2011");
       bits.push("RBI HPI " + (city.rbi_hpi_all_india || "") + " " + (city.rbi_hpi_quarter || ""));
       bits.push("city 2BHK rent ₹" + d3.format(",")(city.rent_2bhk_inr || 0));
+      bits.push("NMMC OSM 13180880");
+      bits.push("KSC envelope schematic");
       return bits.join(" · ");
     },
 
@@ -554,14 +609,14 @@
       if (hint) {
         hint.textContent = this.place === "va"
           ? (m.live ? "Live Zillow / Census · hover to spotlight · click to lock" : "Yearly overlay · hover to spotlight · click to lock")
-          : "BMC ward · ready reckoner + Census 2011 stock · hover to spotlight";
+          : "BMC 24 wards · Navi Mumbai · Mumbai 3.0 (schematic) · hover to spotlight";
       }
       if (!global.HousingMaps || !this.geo()) return;
       try {
         HousingMaps.draw({
           place: this.place,
           geo: this.geo(),
-          rows: this.rows().map((r) => Object.assign({}, r, { label: r.name })),
+          rows: this.rows().map((r) => Object.assign({}, r, { label: r.label || r.name })),
           idKey: this.idKey(),
           metric: m.id,
           kind: m.kind,
@@ -569,6 +624,7 @@
           selectedId: this.selectedId,
           compareId: this.compareId,
           pairId: this.pairId,
+          callouts: this.callouts || [],
           dim: this.dim,
           camera: this.camera || "wide",
           force: !!opts.full,
