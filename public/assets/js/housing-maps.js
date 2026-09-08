@@ -6,7 +6,7 @@
   "use strict";
 
   const INK = "#2c2824";
-  const COLORS = ["#7d9a86", "#cbb688", "#c48962", "#9c5a4e"];
+  const COLORS = ["#7ea08c", "#d4c2a0", "#d0895c", "#b45c4e"];
 
   function sizeOf(id, minH) {
     const el = document.getElementById(id);
@@ -57,7 +57,7 @@
     const d = pts.map((p, i) => (i ? "L" : "M") + x(i).toFixed(1) + "," + y(p.v).toFixed(1)).join(" ");
     const last = pts[pts.length - 1].v;
     const first = pts[0].v;
-    const stroke = last >= first ? "#9c5a4e" : "#7d9a86";
+    const stroke = last >= first ? "#b45c4e" : "#7ea08c";
     return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${d}" fill="none" stroke="${stroke}" stroke-width="1.6"/></svg>`;
   }
 
@@ -66,7 +66,7 @@
     if (kind === "yoy") {
       const maxAbs = Math.max(Math.abs(domain[0] || 0), Math.abs(domain[1] || 0), 1);
       return d3.scaleLinear().domain([-maxAbs, 0, maxAbs])
-        .range([COLORS[0], "#f4ece2", COLORS[3]]).clamp(true);
+        .range([COLORS[0], "#f6efe6", COLORS[3]]).clamp(true);
     }
     return d3.scaleLinear().domain([domain[0], (domain[0] + domain[1]) / 2, domain[1]])
       .range([COLORS[0], COLORS[2], COLORS[3]]).clamp(true);
@@ -77,11 +77,11 @@
   }
 
   function paper() {
-    return isDark() ? "#161310" : "#f4ece2";
+    return isDark() ? "#15120f" : "#f4ece2";
   }
 
   function hair() {
-    return isDark() ? "#1c1916" : "#fffdf8";
+    return isDark() ? "#221e1a" : "#fffdf8";
   }
 
   function reduceMotion() {
@@ -89,7 +89,7 @@
   }
 
   function duration(ms) {
-    return reduceMotion() ? 0 : (ms == null ? 1100 : ms);
+    return reduceMotion() ? 0 : (ms == null ? 1600 : ms);
   }
 
   function layerOf(d) {
@@ -98,8 +98,8 @@
 
   function fillOf(d, byId, metric, color) {
     const lyr = layerOf(d);
-    if (lyr === "navi") return "#4e6f62";
-    if (lyr === "m3") return "#5c4e38";
+    if (lyr === "navi") return "#4f7a68";
+    if (lyr === "m3") return "#6b5640";
     const row = byId.get(String(d.id));
     const v = row && row[metric];
     return isNum(v) ? color(+v) : "#2a2622";
@@ -115,8 +115,8 @@
   }
 
   function strokeOf(d, opts) {
-    if (hotId(d, opts) && String(d.id) === String(opts.selectedId)) return isDark() ? "#f4ece2" : INK;
-    if (hotId(d, opts)) return "#cbb688";
+    if (hotId(d, opts) && String(d.id) === String(opts.selectedId)) return isDark() ? "#f6efe6" : INK;
+    if (hotId(d, opts)) return "#d4c2a0";
     return hair();
   }
 
@@ -130,7 +130,7 @@
     const hot = hotId(d, opts);
     const hover = hoverId && String(d.id) === String(hoverId);
     if (hover) return 1;
-    if (opts.dim === "story") return hot ? 1 : 0.14;
+    if (opts.dim === "story") return hot ? 1 : 0.2;
     if (hoverId) return hot ? 1 : 0.2;
     return 1;
   }
@@ -231,14 +231,14 @@
     const sel = st.callouts.selectAll("g.callout").data(data, (d) => d.id);
     const enter = sel.enter().append("g").attr("class", "callout");
     enter.append("rect").attr("class", "callout-bg")
-      .attr("fill", isDark() ? "rgba(18,16,14,0.92)" : "rgba(255,253,248,0.92)")
-      .attr("stroke", isDark() ? "#cbb688" : "#cfc3b3").attr("stroke-width", 1).attr("rx", 7);
+      .attr("fill", isDark() ? "rgba(12,11,10,0.9)" : "rgba(255,253,248,0.92)")
+      .attr("stroke", isDark() ? "#d4c2a0" : "#cfc3b3").attr("stroke-width", 1).attr("rx", 8);
     enter.append("text").attr("class", "callout-name")
-      .attr("fill", isDark() ? "#cbb688" : "#7a7168").attr("font-size", 10)
+      .attr("fill", isDark() ? "#d4c2a0" : "#7a7168").attr("font-size", 10)
       .attr("font-family", '"Source Sans 3","Segoe UI",sans-serif')
       .attr("x", 0).attr("y", 0);
     enter.append("text").attr("class", "callout-val")
-      .attr("fill", isDark() ? "#f4ece2" : INK).attr("font-size", 15).attr("font-weight", 600)
+      .attr("fill", isDark() ? "#f6efe6" : INK).attr("font-size", 15).attr("font-weight", 600)
       .attr("font-family", 'Fraunces,"Times New Roman",serif')
       .attr("x", 0).attr("y", 16);
     const all = enter.merge(sel);
@@ -285,7 +285,7 @@
     }
     setInterp(st, to, width, height);
     const interp = st.camInterp;
-    st.g.interrupt().transition().duration(dur).ease(d3.easeCubicInOut)
+    st.g.interrupt().transition().duration(dur).ease(d3.easeSinInOut)
       .tween("cam", () => (u) => {
         const view = zoomToView(interp(u), width, height);
         applyView(st.g, view);
@@ -336,7 +336,7 @@
       (exit) => exit.remove()
     );
     const all = st.g.selectAll("path.unit");
-    all.transition().duration(dur)
+    all.transition().duration(dur).ease(d3.easeSinInOut)
       .attr("fill", (d) => fillOf(d, byId, opts.metric, color))
       .attr("fill-opacity", (d) => layerOf(d) === "m3" ? 0.42 : 1)
       .attr("stroke", (d) => strokeOf(d, opts))
@@ -354,7 +354,7 @@
       setInterp(st, to, width, height);
       st.targetKey = key;
     }
-    if (opts.fly) cameraFly(st, to, width, height, 1250);
+    if (opts.fly) cameraFly(st, to, width, height, 1850);
     else cameraScrub(opts.camT != null ? opts.camT : 1);
   }
 
@@ -368,7 +368,7 @@
     const values = rows.map((r) => r[opts.metric]).filter(isNum).map(Number);
     const domain = values.length ? d3.extent(values) : [0, 1];
     const color = colorScale(values, opts.kind);
-    const dur = duration(opts.wipe ? 0 : 640);
+    const dur = duration(opts.wipe ? 0 : 860);
     const st = el._map;
     const sizeOk = st && Math.abs(st.width - width) < 10 && Math.abs(st.height - height) < 10;
     const reuse = st && st.place === opts.place && st.svg && el.querySelector("svg") && sizeOk && !opts.force;
@@ -419,7 +419,7 @@
     bindUnit(units, opts, byId, g);
 
     if (!reduceMotion() && opts.wipe) {
-      clip.attr("opacity", 0).transition().duration(720).attr("opacity", 1);
+      clip.attr("opacity", 0).transition().duration(980).ease(d3.easeSinInOut).attr("opacity", 1);
     }
 
     el._map = {

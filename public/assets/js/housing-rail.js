@@ -7,12 +7,12 @@
   "use strict";
 
   const FONT = '"Source Sans 3","Segoe UI",sans-serif';
-  const INK = "#f4ece2";
-  const MUTED = "#9a9086";
-  const GOLD = "#cbb688";
-  const HOME = "#c48962";
-  const RENT = "#7d9a86";
-  const GRID = "#3d372f";
+  const INK = "#f6efe6";
+  const MUTED = "#8c8278";
+  const GOLD = "#d4c2a0";
+  const HOME = "#d0895c";
+  const RENT = "#7ea08c";
+  const GRID = "#3a342e";
 
   const HousingRail = {
     dash: null,

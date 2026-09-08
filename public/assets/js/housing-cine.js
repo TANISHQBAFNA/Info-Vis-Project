@@ -11,6 +11,10 @@
     played: {},
     scenes: [],
     dash: null,
+    camU: 0,
+    camTarget: 0,
+    camRaf: 0,
+    scrollT: null,
 
     bind(dash) {
       this.dash = dash;
@@ -73,50 +77,95 @@
     },
 
     nearest() {
-      const line = innerHeight * 0.36;
-      let best = 0;
+      const line = innerHeight * 0.38;
+      let best = this.i;
       let bestDist = Infinity;
+      let currentDist = Infinity;
       this.scenes.forEach((el, i) => {
         const r = el.getBoundingClientRect();
-        if (r.bottom < 64 || r.top > innerHeight - 48) return;
-        const anchor = r.top + Math.min(160, r.height * 0.22);
+        if (r.bottom < 48 || r.top > innerHeight - 40) return;
+        const anchor = r.top + Math.min(180, r.height * 0.18);
         const dist = Math.abs(anchor - line);
+        if (i === this.i) currentDist = dist;
         if (dist < bestDist) {
           bestDist = dist;
           best = i;
         }
       });
+      if (best !== this.i && currentDist - bestDist < 72) return this.i;
       return best;
     },
 
     progress(el) {
       if (!el) return 1;
       const r = el.getBoundingClientRect();
-      const t0 = innerHeight * 0.78;
-      const t1 = innerHeight * 0.16;
-      const p = (t0 - r.top) / Math.max(80, t0 - t1);
+      const t0 = innerHeight * 0.82;
+      const t1 = innerHeight * 0.12;
+      const p = (t0 - r.top) / Math.max(120, t0 - t1);
       return Math.max(0, Math.min(1, p));
+    },
+
+    smooth(t) {
+      const x = Math.max(0, Math.min(1, t));
+      return x * x * x * (x * (x * 6 - 15) + 10);
     },
 
     scrubCamera() {
       if (!global.HousingMaps || !HousingMaps.cameraScrub) return;
       if (this.reduce()) {
+        this.camU = 1;
+        this.camTarget = 1;
         HousingMaps.cameraScrub(1);
         return;
       }
-      const ease = d3.easeCubicInOut(this.progress(this.scenes[this.i]));
-      HousingMaps.cameraScrub(ease);
+      this.camTarget = this.smooth(this.progress(this.scenes[this.i]));
+      this.nudgeCam();
+    },
+
+    nudgeCam() {
+      if (this.camRaf) return;
+      const step = () => {
+        this.camRaf = 0;
+        if (!global.HousingMaps || !HousingMaps.cameraScrub) return;
+        const t = this.camTarget;
+        const u = this.camU;
+        const k = this.reduce() ? 1 : 0.13;
+        const next = u + (t - u) * k;
+        this.camU = next;
+        HousingMaps.cameraScrub(next);
+        if (Math.abs(t - next) > 0.0012) {
+          this.camRaf = requestAnimationFrame(step);
+        } else {
+          this.camU = t;
+          HousingMaps.cameraScrub(t);
+        }
+      };
+      this.camRaf = requestAnimationFrame(step);
     },
 
     go(i, opts) {
       i = Math.max(0, Math.min(this.scenes.length - 1, i));
       const reduce = this.reduce();
-      this.lockUntil = Date.now() + (reduce ? 80 : 900);
-      this.scenes[i].scrollIntoView({
-        behavior: reduce ? "auto" : "smooth",
-        block: "start"
-      });
+      const dur = reduce ? 0 : 1550;
+      this.lockUntil = Date.now() + (reduce ? 80 : dur + 80);
+      this.scrollTo(this.scenes[i], dur);
       this.apply(i, { fly: !!(opts && opts.fly) });
+    },
+
+    scrollTo(el, ms) {
+      if (!el) return;
+      if (this.scrollT) this.scrollT.stop();
+      const start = window.scrollY || document.documentElement.scrollTop || 0;
+      const to = start + el.getBoundingClientRect().top;
+      if (ms <= 0 || this.reduce()) {
+        window.scrollTo(0, to);
+        return;
+      }
+      this.scrollT = d3.transition("cine-scroll").duration(ms).ease(d3.easeSinInOut)
+        .tween("scroll", () => {
+          const interp = d3.interpolateNumber(start, to);
+          return (t) => { window.scrollTo(0, interp(t)); };
+        });
     },
 
     goPlace(place) {
@@ -163,6 +212,10 @@
       }
       if (global.HousingRail && HousingRail.draw) HousingRail.draw(scene.id);
       if (!(opts && opts.fly)) this.scrubCamera();
+      else {
+        this.camU = 1;
+        this.camTarget = 1;
+      }
       if (scene.play && !this.played[scene.id] && this.dash && this.dash.playWalk) {
         this.played[scene.id] = true;
         if (!this.reduce()) setTimeout(() => this.dash.playWalk(), 400);
