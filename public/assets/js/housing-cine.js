@@ -15,6 +15,7 @@
     camTarget: 0,
     camRaf: 0,
     scrollT: null,
+    camKey: null,
 
     bind(dash) {
       this.dash = dash;
@@ -202,19 +203,23 @@
         btn.classList.toggle("is-on", +btn.getAttribute("data-i") === i);
       });
       const scene = this.read(this.scenes[i]);
+      const camKey = [scene.place, scene.camera, scene.select || "", scene.pair || "", (scene.callouts || []).join(",")].join("|");
+      const holdCam = this.camKey === camKey;
+      this.camKey = camKey;
       document.body.dataset.scene = scene.id || "";
       document.body.dataset.stage = scene.stage || "map";
       document.body.dataset.focus = scene.focus;
       document.body.classList.toggle("is-coda", scene.id === "scene-coda");
       if (opts && opts.silent) return;
       if (this.dash && this.dash.applyScene) {
-        this.dash.applyScene(scene, { fly: !!(opts && opts.fly) });
+        this.dash.applyScene(scene, { fly: !!(opts && opts.fly) && !holdCam });
       }
       if (global.HousingRail && HousingRail.draw) HousingRail.draw(scene.id);
-      if (!(opts && opts.fly)) this.scrubCamera();
-      else {
+      if (holdCam || (opts && opts.fly)) {
         this.camU = 1;
         this.camTarget = 1;
+      } else {
+        this.scrubCamera();
       }
       if (scene.play && !this.played[scene.id] && this.dash && this.dash.playWalk) {
         this.played[scene.id] = true;

@@ -350,6 +350,14 @@
   function aim(st, opts, geo, width, height) {
     const to = viewFrom(st.path, geo, opts, width, height);
     const key = [opts.camera, opts.selectedId, opts.pairId || "", (opts.callouts || []).join(",")].join("|");
+    const hold = st.targetKey === key;
+    if (hold) {
+      applyView(st.g, to);
+      st.view = to;
+      setInterp(st, to, width, height);
+      placeCallouts(st);
+      return;
+    }
     if (st.targetKey !== key) {
       setInterp(st, to, width, height);
       st.targetKey = key;
