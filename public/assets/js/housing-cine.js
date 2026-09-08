@@ -48,17 +48,20 @@
     },
 
     bindKeys() {
-      document.addEventListener("keydown", (e) => {
+      window.addEventListener("keydown", (e) => {
         if (e.metaKey || e.ctrlKey || e.altKey) return;
-        const tag = (e.target && e.target.tagName) || "";
-        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (e.target && e.target.isContentEditable)) return;
-        const next = e.key === "ArrowDown" || e.key === "PageDown" || e.key === "j" || e.key === "J" || e.key === " ";
-        const prev = e.key === "ArrowUp" || e.key === "PageUp" || e.key === "k" || e.key === "K";
+        const el = e.target;
+        const tag = (el && el.tagName) || "";
+        const typing = (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (el && el.isContentEditable))
+          && el && el.offsetParent !== null;
+        if (typing) return;
+        const next = e.key === "ArrowDown" || e.key === "ArrowRight" || e.key === "PageDown" || e.key === "j" || e.key === "J" || e.key === " ";
+        const prev = e.key === "ArrowUp" || e.key === "ArrowLeft" || e.key === "PageUp" || e.key === "k" || e.key === "K";
         if (next) { e.preventDefault(); this.go(this.i + 1, { fly: true }); }
         else if (prev) { e.preventDefault(); this.go(this.i - 1, { fly: true }); }
         else if (e.key === "Home") { e.preventDefault(); this.go(0, { fly: true }); }
         else if (e.key === "End") { e.preventDefault(); this.go(this.scenes.length - 1, { fly: true }); }
-      });
+      }, { capture: true });
     },
 
     bindScroll() {
@@ -71,7 +74,7 @@
           if (Date.now() < this.lockUntil) return;
           const n = this.nearest();
           if (n != null && n !== this.i) this.apply(n, { fly: false });
-          this.scrubCamera();
+          if (!this.isHold(this.scenes[this.i] && this.scenes[this.i].id)) this.scrubCamera();
         });
       };
       window.addEventListener("scroll", onScroll, { passive: true });
@@ -148,18 +151,22 @@
       i = Math.max(0, Math.min(this.scenes.length - 1, i));
       const reduce = this.reduce();
       const dur = reduce ? 0 : 1550;
-      this.lockUntil = Date.now() + (reduce ? 80 : dur + 80);
+      this.lockUntil = Date.now() + (reduce ? 80 : dur + 240);
       this.scrollTo(this.scenes[i], dur);
       this.apply(i, { fly: !!(opts && opts.fly) });
     },
 
     scrollTo(el, ms) {
       if (!el) return;
-      if (this.scrollT) this.scrollT.stop();
+      if (this.scrollT && this.scrollT.stop) this.scrollT.stop();
       const start = window.scrollY || document.documentElement.scrollTop || 0;
-      const to = start + el.getBoundingClientRect().top;
-      if (ms <= 0 || this.reduce()) {
+      const r = el.getBoundingClientRect();
+      const line = innerHeight * 0.38;
+      const anchor = Math.min(180, r.height * 0.18);
+      const to = Math.max(0, start + r.top - (line - anchor));
+      if (ms <= 0 || this.reduce() || !global.d3) {
         window.scrollTo(0, to);
+        this.scrollT = null;
         return;
       }
       this.scrollT = d3.transition("cine-scroll").duration(ms).ease(d3.easeSinInOut)
@@ -192,8 +199,13 @@
       };
     },
 
+    isHold(id) {
+      return id === "scene-fairfax" || id === "scene-years" || id === "scene-cone";
+    },
+
     apply(i, opts) {
       if (!this.scenes[i]) return;
+      const prevId = this.scenes[this.i] && this.scenes[this.i].id;
       this.i = i;
       this.scenes.forEach((el, n) => {
         el.classList.toggle("is-on", n === i);
@@ -204,18 +216,21 @@
       });
       const scene = this.read(this.scenes[i]);
       const camKey = [scene.place, scene.camera, scene.select || "", scene.pair || "", (scene.callouts || []).join(",")].join("|");
-      const holdCam = this.camKey === camKey;
+      const stayHold = this.isHold(scene.id) && this.isHold(prevId);
+      const enterHold = this.isHold(scene.id) && !this.isHold(prevId);
       this.camKey = camKey;
       document.body.dataset.scene = scene.id || "";
       document.body.dataset.stage = scene.stage || "map";
       document.body.dataset.focus = scene.focus;
       document.body.classList.toggle("is-coda", scene.id === "scene-coda");
       if (opts && opts.silent) return;
+      const fly = stayHold ? false : (!!(opts && opts.fly) || enterHold);
+      const hold = stayHold;
       if (this.dash && this.dash.applyScene) {
-        this.dash.applyScene(scene, { fly: !!(opts && opts.fly) && !holdCam });
+        this.dash.applyScene(scene, { fly: fly, hold: hold });
       }
       if (global.HousingRail && HousingRail.draw) HousingRail.draw(scene.id);
-      if (holdCam || (opts && opts.fly)) {
+      if (hold || fly) {
         this.camU = 1;
         this.camTarget = 1;
       } else {

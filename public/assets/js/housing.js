@@ -156,9 +156,14 @@
       this.camera = scene.camera || "wide";
       this.stage = scene.stage || "map";
       this.setStage(this.stage);
-      this.render({ full: placeChanged, wipe: placeChanged, fly: !!(how && how.fly) });
+      this.render({
+        full: placeChanged,
+        wipe: placeChanged,
+        fly: !!(how && how.fly),
+        hold: !!(how && how.hold)
+      });
       requestAnimationFrame(() => {
-        this.drawMap({ fly: !!(how && how.fly) });
+        this.drawMap({ fly: !!(how && how.fly), hold: !!(how && how.hold) });
         this.drawTime();
       });
     },
@@ -637,7 +642,8 @@
           force: !!opts.full,
           wipe: !!opts.wipe,
           fly: !!opts.fly,
-          camT: opts.fly ? 1 : (global.HousingCine ? HousingCine.progress(HousingCine.scenes[HousingCine.i]) : 1),
+          hold: !!opts.hold,
+          camT: opts.fly || opts.hold ? 1 : (global.HousingCine ? HousingCine.progress(HousingCine.scenes[HousingCine.i]) : 1),
           onSelect: (id) => this.select(id),
           tip: (event, html) => this.tip(html, event && event.clientX, event && event.clientY)
         });

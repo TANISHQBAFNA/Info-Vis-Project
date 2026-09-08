@@ -350,20 +350,30 @@
   function aim(st, opts, geo, width, height) {
     const to = viewFrom(st.path, geo, opts, width, height);
     const key = [opts.camera, opts.selectedId, opts.pairId || "", (opts.callouts || []).join(",")].join("|");
-    const hold = st.targetKey === key;
-    if (hold) {
-      applyView(st.g, to);
-      st.view = to;
-      setInterp(st, to, width, height);
+    if (opts.hold) {
+      const stay = st.view || to;
+      st.targetKey = key;
+      st.didFly = true;
+      applyView(st.g, stay);
+      st.view = stay;
+      setInterp(st, stay, width, height);
       placeCallouts(st);
       return;
     }
-    if (st.targetKey !== key) {
+    const keyChanged = st.targetKey !== key;
+    if (keyChanged) {
       setInterp(st, to, width, height);
       st.targetKey = key;
+      st.didFly = false;
     }
-    if (opts.fly) cameraFly(st, to, width, height, 1850);
-    else cameraScrub(opts.camT != null ? opts.camT : 1);
+    if (opts.fly) {
+      if (!st.didFly) {
+        st.didFly = true;
+        cameraFly(st, to, width, height, 1850);
+      }
+      return;
+    }
+    cameraScrub(opts.camT != null ? opts.camT : 1);
   }
 
   function draw(opts) {
