@@ -351,12 +351,12 @@
     const to = viewFrom(st.path, geo, opts, width, height);
     const key = [opts.camera, opts.selectedId, opts.pairId || "", (opts.callouts || []).join(",")].join("|");
     if (opts.hold) {
-      const stay = st.view || to;
+      st.g.interrupt();
       st.targetKey = key;
       st.didFly = true;
-      applyView(st.g, stay);
-      st.view = stay;
-      setInterp(st, stay, width, height);
+      applyView(st.g, to);
+      st.view = to;
+      setInterp(st, to, width, height);
       placeCallouts(st);
       return;
     }

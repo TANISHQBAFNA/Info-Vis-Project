@@ -55,8 +55,12 @@
         const typing = (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (el && el.isContentEditable))
           && el && el.offsetParent !== null;
         if (typing) return;
-        const next = e.key === "ArrowDown" || e.key === "ArrowRight" || e.key === "PageDown" || e.key === "j" || e.key === "J" || e.key === " ";
-        const prev = e.key === "ArrowUp" || e.key === "ArrowLeft" || e.key === "PageUp" || e.key === "k" || e.key === "K";
+        if (e.repeat) return;
+        const code = e.code || "";
+        const next = e.key === "ArrowDown" || e.key === "ArrowRight" || e.key === "PageDown" || e.key === "j" || e.key === "J" || e.key === " "
+          || code === "ArrowDown" || code === "ArrowRight" || code === "PageDown" || code === "Space";
+        const prev = e.key === "ArrowUp" || e.key === "ArrowLeft" || e.key === "PageUp" || e.key === "k" || e.key === "K"
+          || code === "ArrowUp" || code === "ArrowLeft" || code === "PageUp";
         if (next) { e.preventDefault(); this.go(this.i + 1, { fly: true }); }
         else if (prev) { e.preventDefault(); this.go(this.i - 1, { fly: true }); }
         else if (e.key === "Home") { e.preventDefault(); this.go(0, { fly: true }); }
@@ -158,22 +162,28 @@
 
     scrollTo(el, ms) {
       if (!el) return;
-      if (this.scrollT && this.scrollT.stop) this.scrollT.stop();
+      if (this.scrollRaf) cancelAnimationFrame(this.scrollRaf);
       const start = window.scrollY || document.documentElement.scrollTop || 0;
       const r = el.getBoundingClientRect();
       const line = innerHeight * 0.38;
       const anchor = Math.min(180, r.height * 0.18);
       const to = Math.max(0, start + r.top - (line - anchor));
-      if (ms <= 0 || this.reduce() || !global.d3) {
+      if (!Number.isFinite(to) || Math.abs(to - start) < 1) return;
+      if (ms <= 0 || this.reduce()) {
         window.scrollTo(0, to);
-        this.scrollT = null;
+        this.scrollRaf = 0;
         return;
       }
-      this.scrollT = d3.transition("cine-scroll").duration(ms).ease(d3.easeSinInOut)
-        .tween("scroll", () => {
-          const interp = d3.interpolateNumber(start, to);
-          return (t) => { window.scrollTo(0, interp(t)); };
-        });
+      const t0 = performance.now();
+      const dur = ms;
+      const step = (now) => {
+        const u = Math.max(0, Math.min(1, (now - t0) / dur));
+        const e = 0.5 - 0.5 * Math.cos(Math.PI * u);
+        window.scrollTo(0, start + (to - start) * e);
+        if (u < 1) this.scrollRaf = requestAnimationFrame(step);
+        else this.scrollRaf = 0;
+      };
+      this.scrollRaf = requestAnimationFrame(step);
     },
 
     goPlace(place) {
