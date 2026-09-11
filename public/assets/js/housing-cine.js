@@ -1,6 +1,5 @@
 /**
- * Scrollytelling: chapters drive place, metric, and a bounds camera.
- * Scroll progress inside a chapter eases the zoom; j/k flies to the landing.
+ * Pager: one chapter per wheel / key. Camera flies on the step.
  */
 (function (global) {
   "use strict";
@@ -21,8 +20,8 @@
       this.dash = dash;
       this.scenes = Array.prototype.slice.call(document.querySelectorAll(".cine-scene"));
       if (!this.scenes.length) return;
-      this.buildRail();
       this.bindKeys();
+      this.bindWheel();
       this.bindScroll();
       this.apply(0, { fly: false });
       document.body.classList.add("is-cine-ready");
@@ -32,19 +31,43 @@
       return global.matchMedia && global.matchMedia("(prefers-reduced-motion: reduce)").matches;
     },
 
-    buildRail() {
-      const nav = document.getElementById("cine-progress");
-      if (!nav) return;
-      nav.innerHTML = this.scenes.map((el, i) => {
-        const chap = (el.querySelector(".cine-chap") || {}).textContent || ("Scene " + (i + 1));
-        const short = String(chap).split("·")[0].trim();
-        return `<button type="button" class="cine-tick" data-i="${i}" aria-label="${esc(chap)}" title="${esc(chap)}"><span>${esc(short)}</span></button>`;
-      }).join("");
-      nav.addEventListener("click", (e) => {
-        const btn = e.target.closest("[data-i]");
-        if (!btn) return;
-        this.go(+btn.getAttribute("data-i"), { fly: true });
-      });
+    bindWheel() {
+      let acc = 0;
+      let last = 0;
+      const onWheel = (e) => {
+        if (e.ctrlKey) return;
+        e.preventDefault();
+        if (Date.now() < this.lockUntil) return;
+        const now = Date.now();
+        if (now - last > 280) acc = 0;
+        last = now;
+        const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * innerHeight : e.deltaY;
+        acc += dy;
+        if (acc > 56) {
+          acc = 0;
+          this.go(this.i + 1, { fly: true });
+        } else if (acc < -56) {
+          acc = 0;
+          this.go(this.i - 1, { fly: true });
+        }
+      };
+      window.addEventListener("wheel", onWheel, { passive: false });
+      let y0 = null;
+      window.addEventListener("touchstart", (e) => {
+        y0 = e.touches && e.touches[0] ? e.touches[0].clientY : null;
+      }, { passive: true });
+      window.addEventListener("touchmove", (e) => {
+        if (y0 == null || !e.touches || !e.touches[0]) return;
+        if (Math.abs(e.touches[0].clientY - y0) > 10) e.preventDefault();
+      }, { passive: false });
+      window.addEventListener("touchend", (e) => {
+        if (y0 == null || !e.changedTouches || !e.changedTouches[0]) return;
+        const dy = y0 - e.changedTouches[0].clientY;
+        y0 = null;
+        if (Date.now() < this.lockUntil) return;
+        if (Math.abs(dy) < 52) return;
+        this.go(this.i + (dy > 0 ? 1 : -1), { fly: true });
+      }, { passive: true });
     },
 
     bindKeys() {
@@ -85,22 +108,17 @@
     },
 
     nearest() {
-      const line = innerHeight * 0.38;
+      const mid = innerHeight * 0.5;
       let best = this.i;
       let bestDist = Infinity;
-      let currentDist = Infinity;
       this.scenes.forEach((el, i) => {
         const r = el.getBoundingClientRect();
-        if (r.bottom < 48 || r.top > innerHeight - 40) return;
-        const anchor = r.top + Math.min(180, r.height * 0.18);
-        const dist = Math.abs(anchor - line);
-        if (i === this.i) currentDist = dist;
+        const dist = Math.abs((r.top + r.bottom) / 2 - mid);
         if (dist < bestDist) {
           bestDist = dist;
           best = i;
         }
       });
-      if (best !== this.i && currentDist - bestDist < 72) return this.i;
       return best;
     },
 
@@ -153,9 +171,10 @@
 
     go(i, opts) {
       i = Math.max(0, Math.min(this.scenes.length - 1, i));
+      if (i === this.i) return;
       const reduce = this.reduce();
-      const dur = reduce ? 0 : 1550;
-      this.lockUntil = Date.now() + (reduce ? 80 : dur + 240);
+      const dur = reduce ? 0 : 780;
+      this.lockUntil = Date.now() + (reduce ? 80 : dur + 160);
       this.scrollTo(this.scenes[i], dur);
       this.apply(i, { fly: !!(opts && opts.fly) });
     },
@@ -165,9 +184,7 @@
       if (this.scrollRaf) cancelAnimationFrame(this.scrollRaf);
       const start = window.scrollY || document.documentElement.scrollTop || 0;
       const r = el.getBoundingClientRect();
-      const line = innerHeight * 0.38;
-      const anchor = Math.min(180, r.height * 0.18);
-      const to = Math.max(0, start + r.top - (line - anchor));
+      const to = Math.max(0, start + r.top);
       if (!Number.isFinite(to) || Math.abs(to - start) < 1) return;
       if (ms <= 0 || this.reduce()) {
         window.scrollTo(0, to);
@@ -221,9 +238,6 @@
         el.classList.toggle("is-on", n === i);
         el.setAttribute("aria-current", n === i ? "true" : "false");
       });
-      document.querySelectorAll(".cine-tick").forEach((btn) => {
-        btn.classList.toggle("is-on", +btn.getAttribute("data-i") === i);
-      });
       const scene = this.read(this.scenes[i]);
       const camKey = [scene.place, scene.camera, scene.select || "", scene.pair || "", (scene.callouts || []).join(",")].join("|");
       const stayHold = this.isHold(scene.id) && this.isHold(prevId);
@@ -252,11 +266,6 @@
       }
     }
   };
-
-  function esc(s) {
-    return String(s == null ? "" : s)
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  }
 
   global.HousingCine = HousingCine;
 })(window);

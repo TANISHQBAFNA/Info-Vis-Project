@@ -302,7 +302,7 @@
     const rampClass = opts.kind === "yoy" ? "ramp ramp-yoy" : "ramp";
     el.innerHTML =
       `<span class="${rampClass}"><i></i></span><span>${lo}</span><span>${hi}</span>` +
-      `<span>Scroll zooms · click a shape</span>`;
+      `<span>← → steps · click a shape</span>`;
   }
 
   function bindUnit(sel, opts, byId, g) {
