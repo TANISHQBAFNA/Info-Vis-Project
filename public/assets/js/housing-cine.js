@@ -20,6 +20,7 @@
       this.dash = dash;
       this.scenes = Array.prototype.slice.call(document.querySelectorAll(".cine-scene"));
       if (!this.scenes.length) return;
+      this.buildRail();
       this.bindKeys();
       this.bindWheel();
       this.bindScroll();
@@ -29,6 +30,21 @@
 
     reduce() {
       return global.matchMedia && global.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    },
+
+    buildRail() {
+      const nav = document.getElementById("cine-progress");
+      if (!nav) return;
+      nav.innerHTML = this.scenes.map((el, i) => {
+        const chap = (el.querySelector(".cine-chap") || {}).textContent || ("Scene " + (i + 1));
+        const short = String(chap).split("·")[0].trim();
+        return `<button type="button" class="cine-tick" data-i="${i}" aria-label="${esc(chap)}" title="${esc(chap)}"><span>${esc(short)}</span></button>`;
+      }).join("");
+      nav.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-i]");
+        if (!btn) return;
+        this.go(+btn.getAttribute("data-i"), { fly: true });
+      });
     },
 
     bindWheel() {
@@ -238,6 +254,9 @@
         el.classList.toggle("is-on", n === i);
         el.setAttribute("aria-current", n === i ? "true" : "false");
       });
+      document.querySelectorAll(".cine-tick").forEach((btn) => {
+        btn.classList.toggle("is-on", +btn.getAttribute("data-i") === i);
+      });
       const scene = this.read(this.scenes[i]);
       const camKey = [scene.place, scene.camera, scene.select || "", scene.pair || "", (scene.callouts || []).join(",")].join("|");
       const stayHold = this.isHold(scene.id) && this.isHold(prevId);
@@ -266,6 +285,11 @@
       }
     }
   };
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
 
   global.HousingCine = HousingCine;
 })(window);
