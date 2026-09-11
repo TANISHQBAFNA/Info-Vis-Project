@@ -346,7 +346,7 @@
       facts: [
         { k: "Virginia range", v: isNum(vaSpread) ? d3.format(".1f")(vaSpread) + "×" : "—", s: "ZHVI max / min" },
         { k: "BMC range", v: isNum(asrSpread) ? d3.format(".1f")(asrSpread) + "×" : "—", s: "ASR max / min" },
-        { k: "Fairfax years", v: fmt(yearsNow, "years"), s: "rent stacked into a house" },
+        { k: "Fairfax years", v: fmt(yearsNow, "years"), s: "home price ÷ annual rent" },
         { k: "NMMC people", v: fmt(navi && navi.pop, "count"), s: "already a city" }
       ],
       kicker: "Two metros. Two kinds of data.",
