@@ -36,6 +36,14 @@
     place: "va",
     metric: "zhvi",
     selectedId: DEFAULTS.va,
+    compareId: null,
+    pairId: null,
+    callouts: [],
+    dim: null,
+    kicker: "",
+    stage: "map",
+    scrubIndex: null,
+    camera: "wide",
     sources: null,
     va: null,
     mx: null,
@@ -73,7 +81,9 @@
       const dash = document.querySelector(".dashboard");
       if (dash) dash.hidden = false;
       this.bind();
-      this.render();
+      if (global.HousingRail && HousingRail.bind) HousingRail.bind(this);
+      if (global.HousingCine && HousingCine.bind) HousingCine.bind(this);
+      else this.render({ full: true });
     },
 
     pack() { return this.place === "va" ? this.va : this.mx; },
@@ -82,24 +92,32 @@
     idKey() { return this.place === "va" ? "fips" : "id"; },
     selected() {
       const key = this.idKey();
+      if (!this.selectedId) return null;
       return this.rows().find((r) => String(r[key]) === String(this.selectedId)) || this.rows()[0];
     },
     metricDef() {
       return METRICS[this.place].find((m) => m.id === this.metric) || METRICS[this.place][0];
     },
 
-    setPlace(place) {
+    setPlace(place, fromCine) {
       if (place !== "va" && place !== "mumbai") return;
+      if (!fromCine && global.HousingCine && HousingCine.scenes && HousingCine.scenes.length) {
+        HousingCine.goPlace(place);
+        return;
+      }
       this.place = place;
       this.metric = METRICS[place][0].id;
       this.selectedId = DEFAULTS[place];
-      this.render();
+      this.compareId = null;
+      this.scrubIndex = null;
+      this.camera = "wide";
+      this.render({ full: true, wipe: true });
     },
 
     setMetric(id) {
       if (!METRICS[this.place].some((m) => m.id === id)) return;
       this.metric = id;
-      this.render();
+      this.render({ skipTime: true });
     },
 
     select(id) {
@@ -107,7 +125,151 @@
       const key = this.idKey();
       if (!this.rows().some((r) => String(r[key]) === String(id))) return;
       this.selectedId = id;
+      this.camera = "tight";
+      this.dim = "story";
+      this.scrubIndex = null;
+      this.render({ fly: true });
+    },
+
+    applyScene(scene, how) {
+      if (!scene) return;
+      const placeChanged = scene.place && scene.place !== this.place;
+      if (placeChanged) {
+        this.place = scene.place;
+        this.compareId = null;
+        this.scrubIndex = null;
+        if (this._playTimer) {
+          this._playTimer.stop();
+          this._playTimer = null;
+          this.syncPlayBtn && this.syncPlayBtn();
+        }
+      }
+      if (scene.metric && METRICS[this.place] && METRICS[this.place].some((m) => m.id === scene.metric)) {
+        this.metric = scene.metric;
+      }
+      if (scene.select === "none" || scene.select === "") this.selectedId = null;
+      else if (scene.select) this.selectedId = scene.select;
+      this.pairId = scene.pair || null;
+      this.callouts = scene.callouts || [];
+      this.dim = scene.dim || null;
+      this.kicker = scene.kicker || "";
+      this.camera = scene.camera || "wide";
+      this.stage = scene.stage || "map";
+      this.setStage(this.stage);
+      this.render({
+        full: placeChanged,
+        wipe: placeChanged,
+        fly: !!(how && how.fly),
+        hold: !!(how && how.hold)
+      });
+      requestAnimationFrame(() => {
+        this.drawMap({ fly: !!(how && how.fly), hold: !!(how && how.hold) });
+        this.drawTime();
+      });
+    },
+
+    setStage(stage) {
+      this.stage = stage || "map";
+      document.body.dataset.stage = this.stage;
+      document.querySelectorAll(".film-picture").forEach((el) => {
+        el.classList.toggle("is-on", el.getAttribute("data-stage") === this.stage);
+      });
+    },
+
+    toggleCompare() {
+      if (this.compareId && String(this.compareId) === String(this.selectedId)) {
+        this.compareId = null;
+      } else {
+        this.compareId = this.selectedId;
+      }
+      this.syncPin();
       this.render();
+    },
+
+    syncPin() {
+      const btn = document.getElementById("btn-pin");
+      if (!btn) return;
+      const on = !!this.compareId;
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+      btn.classList.toggle("is-active", on);
+      const cmp = this.compareId && this.rows().find((r) => String(r[this.idKey()]) === String(this.compareId));
+      btn.textContent = on ? ("Holding " + (cmp ? cmp.name : "place")) : "Hold to compare";
+    },
+
+    setScrub(i) {
+      this.scrubIndex = i;
+      this.drawTime();
+      this.syncScrub();
+    },
+
+    playWalk() {
+      if (this.place !== "va") return;
+      if (this._playTimer) {
+        this._playTimer.stop();
+        this._playTimer = null;
+        this.syncPlayBtn();
+        return;
+      }
+      const w = this.selected();
+      if (!global.HousingPath || !w) return;
+      const walk = HousingPath.alignedWalk(w.zhviSeries, w.zoriSeries);
+      if (walk.length < 3) return;
+      const reduce = global.matchMedia && global.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (reduce) {
+        this.scrubIndex = walk.length - 1;
+        this.drawTime();
+        this.syncScrub();
+        return;
+      }
+      let i = 0;
+      this.scrubIndex = 0;
+      this.drawTime();
+      this.syncScrub();
+      this._playTimer = d3.interval(() => {
+        i += 1;
+        if (i >= walk.length) {
+          this._playTimer.stop();
+          this._playTimer = null;
+          this.scrubIndex = walk.length - 1;
+          this.drawTime();
+          this.syncScrub();
+          this.syncPlayBtn();
+          return;
+        }
+        this.scrubIndex = i;
+        this.drawTime();
+        this.syncScrub();
+      }, 240);
+      this.syncPlayBtn();
+    },
+
+    syncPlayBtn() {
+      const btn = document.getElementById("btn-play-years");
+      if (btn) btn.textContent = this._playTimer ? "Pause" : "Play years";
+    },
+
+    syncScrub() {
+      const wrap = document.getElementById("year-scrub-wrap");
+      const input = document.getElementById("year-scrub");
+      const lab = document.getElementById("year-scrub-label");
+      if (!wrap || !input) return;
+      if (this.place !== "va") {
+        wrap.hidden = true;
+        return;
+      }
+      const w = this.selected();
+      const walk = global.HousingPath && w ? HousingPath.alignedWalk(w.zhviSeries, w.zoriSeries) : [];
+      if (walk.length < 3) {
+        wrap.hidden = true;
+        return;
+      }
+      wrap.hidden = false;
+      input.max = String(walk.length - 1);
+      const i = Number.isFinite(this.scrubIndex) ? this.scrubIndex : walk.length - 1;
+      input.value = String(i);
+      const yr = walk[i] && walk[i].year;
+      if (lab) lab.textContent = yr == null ? "now" : String(yr);
+      input.setAttribute("aria-valuetext", lab ? lab.textContent : "");
     },
 
     bind() {
@@ -117,13 +279,31 @@
       const reset = document.getElementById("btn-reset");
       if (reset) reset.addEventListener("click", () => {
         this.selectedId = DEFAULTS[this.place];
-        this.render();
+        this.compareId = null;
+        this.scrubIndex = null;
+        this.camera = "wide";
+        this.syncPin();
+        this.render({ full: true });
       });
+      const pin = document.getElementById("btn-pin");
+      if (pin) pin.addEventListener("click", () => this.toggleCompare());
+      const play = document.getElementById("btn-play-years");
+      if (play) play.addEventListener("click", () => this.playWalk());
+      const scrub = document.getElementById("year-scrub");
+      if (scrub) {
+        scrub.addEventListener("input", () => this.setScrub(+scrub.value));
+      }
       this.bindSearch();
       let t;
       window.addEventListener("resize", () => {
         clearTimeout(t);
-        t = setTimeout(() => { this.drawMap(); this.drawTime(); }, 160);
+        t = setTimeout(() => {
+          this.drawMap();
+          this.drawTime();
+          if (global.HousingCine && global.HousingRail && HousingCine.scenes[HousingCine.i]) {
+            HousingRail.draw(HousingCine.scenes[HousingCine.i].id);
+          }
+        }, 160);
       });
     },
 
@@ -159,22 +339,77 @@
       });
     },
 
-    render() {
+    render(opts) {
+      opts = opts || {};
       document.querySelectorAll("[data-place]").forEach((btn) => {
         const on = btn.getAttribute("data-place") === this.place;
         btn.setAttribute("aria-pressed", on ? "true" : "false");
         btn.classList.toggle("is-active", on);
       });
+      this.syncPin();
       this.renderMetrics();
       this.renderKpis();
+      this.renderHero();
       try { this.renderAbout(); }
       catch (err) { console.warn("about fail", err); }
-      this.drawMap();
-      this.drawTime();
+      this.drawMap(opts);
+      if (!opts.skipTime) this.drawTime();
       this.stamp();
       const search = document.getElementById("place-search");
       const sel = this.selected();
       if (search && sel) search.value = sel.name;
+    },
+
+    renderHero() {
+      const el = document.getElementById("cine-hero");
+      if (!el) return;
+      const w = this.selected();
+      const m = this.metricDef();
+      if (!m || !global.HousingMaps) {
+        el.innerHTML = "";
+        return;
+      }
+      const kicker = this.kicker || (this.place === "va" ? "Virginia" : "Mumbai");
+      let name = w ? w.name : (this.place === "va" ? "Virginia · 133 counties" : "BMC · Navi Mumbai · Mumbai 3.0");
+      let metric = m.label;
+      let value;
+      let note = "";
+      if (w && w.layer === "navi") {
+        metric = "Census 2011";
+        value = HousingMaps.fmt(w.pop, "count");
+        note = "CIDCO city · node ASR not mapped";
+      } else if (w && w.layer === "m3") {
+        metric = "Notified area";
+        value = HousingMaps.fmt(w.area_km2, "km2");
+        note = "124 villages · no ready reckoner";
+      } else if (w) {
+        value = HousingMaps.fmt(w[m.id], m.kind);
+        if (Number.isFinite(w.zhvfYoy)) note = "Metro Y1 " + d3.format("+.1f")(w.zhvfYoy) + "% · " + (w.zhvfName || "");
+      } else if (this.place === "mumbai" && this.camera === "bmc") {
+        name = "Brihanmumbai · 24 wards";
+        const vals = this.rows().map((r) => r[m.id]).filter((v) => v != null && v !== "" && Number.isFinite(+v));
+        value = HousingMaps.fmt(d3.median(vals), m.kind);
+        note = "Stamp-duty floor. Two more cities sit east.";
+      } else if (this.place === "mumbai" && (this.callouts || []).length) {
+        name = "Island · Creek · Frontier";
+        metric = "Three Mumbais";
+        value = "BMC · NMMC · KSC";
+        note = "Only BMC has a ready reckoner on this map";
+      } else if (this.place === "mumbai") {
+        name = "BMC · Navi Mumbai · Mumbai 3.0";
+        metric = "Click a shape";
+        value = "Your turn";
+        note = "24 wards + NMMC + KSC New Town";
+      } else {
+        const vals = this.rows().map((r) => r[m.id]).filter((v) => v != null && v !== "" && Number.isFinite(+v));
+        value = HousingMaps.fmt(d3.median(vals), m.kind);
+      }
+      el.innerHTML =
+        `<p class="cine-hero-kicker">${esc(kicker)}</p>` +
+        `<p class="cine-hero-place">${esc(name)}</p>` +
+        `<p class="cine-hero-metric">${esc(metric)}</p>` +
+        `<p class="cine-hero-value">${value}</p>` +
+        (note ? `<p class="cine-hero-note">${esc(note)}</p>` : "");
     },
 
     renderMetrics() {
@@ -201,13 +436,14 @@
       if (!row) return;
       const m = this.metricDef();
       const rows = this.rows();
-      const vals = rows.map((r) => +r[m.id]).filter(Number.isFinite);
-      const max = rows.slice().sort((a, b) => (+b[m.id] || -1e12) - (+a[m.id] || -1e12))[0];
-      const min = rows.slice().sort((a, b) => (+a[m.id] || 1e12) - (+b[m.id] || 1e12))[0];
+      const ranked = rows.filter((r) => r[m.id] != null && r[m.id] !== "" && Number.isFinite(+r[m.id]));
+      const vals = ranked.map((r) => +r[m.id]);
+      const max = ranked.slice().sort((a, b) => (+b[m.id]) - (+a[m.id]))[0];
+      const min = ranked.slice().sort((a, b) => (+a[m.id]) - (+b[m.id]))[0];
       const med = d3.median(vals);
       const fmt = (v) => global.HousingMaps.fmt(v, m.kind);
       const cards = [
-        kpi("PLACES", rows.length, this.place === "va" ? "counties + cities" : "BMC wards"),
+        kpi("PLACES", this.place === "va" ? rows.length : "24 + 2", this.place === "va" ? "counties + cities" : "BMC · NMMC · 3.0"),
         kpi("HIGHEST", fmt(max && max[m.id]), max ? max.name : "—"),
         kpi("MEDIAN", fmt(med), m.label),
         kpi("LOWEST", fmt(min && min[m.id]), min ? min.name : "—")
@@ -227,7 +463,15 @@
       const feed = document.getElementById("about-feed");
       const title = document.getElementById("about-title");
       const stamp = document.getElementById("about-stamp");
-      if (!w || !feed) return;
+      if (!feed) return;
+      if (!w) {
+        if (title) title.textContent = this.place === "va" ? "Virginia" : "Mumbai";
+        if (stamp) stamp.textContent = "Establishing shot";
+        feed.innerHTML = this.place === "va"
+          ? `<p class="intel-lede">133 counties and independent cities. Color is Zillow’s typical home (ZHVI), live. Scroll to go in — the ceiling, then the floor, then the county that holds most of the expensive story.</p>`
+          : `<p class="intel-lede">Three Mumbais. BMC has a stamp-duty floor. Navi Mumbai already has people. Mumbai 3.0 is a plan on 124 villages. The camera holds the city with a rate, then crosses the creek.</p>`;
+        return;
+      }
       if (title) title.textContent = w.name;
       const m = this.metricDef();
       if (stamp) stamp.textContent = m.hint;
@@ -287,6 +531,28 @@
            </div>
            <p class="intel-body">HUD FMR is a bedroom rent, not per square foot. Many Northern Virginia counties share the Washington HMFA 2BR, so that layer looks flat on purpose. Closed-sale $/ft² has no Zillow county replacement (ZHVI PSF discontinued); Redfin’s county file is ~230 MB and cannot run in the browser.</p>
            <p class="combo-meta">${this.liveNoteVa()}</p>`;
+      } else if (w.layer === "navi") {
+        feed.innerHTML =
+          `<p class="intel-lede">${esc(w.places)}. CIDCO planned city (1971), NMMC 1992. Node-level IGR ready reckoner exists and is not compiled onto this map.</p>
+           <h3 class="feed-h">People, not a floor</h3>
+           <div class="stat-grid">
+             ${stat("Population", fmt(w.pop, "count"), w.census_vintage || "Census 2011")}
+             ${stat("Households", fmt(w.households, "count"), "NMMC")}
+             ${stat("Area", fmt(w.area_km2, "km2"), "NMMC")}
+           </div>
+           <p class="intel-body">${esc(w.note || "")}</p>
+           <p class="combo-meta">${this.liveNoteMx()}</p>`;
+      } else if (w.layer === "m3") {
+        feed.innerHTML =
+          `<p class="intel-lede">${esc(w.places)}. MMRDA New Town Development Authority, notified 15 Oct 2024. Envelope on this map is schematic, not a cadastral sheet.</p>
+           <h3 class="feed-h">A plan, not a rate</h3>
+           <div class="stat-grid">
+             ${stat("Notified area", fmt(w.area_km2, "km2"), "KSC New Town")}
+             ${stat("Villages", fmt(w.villages, "count"), "Panvel, Uran, Pen")}
+             ${stat("Ready reckoner", "—", "none yet")}
+           </div>
+           <p class="intel-body">${esc(w.note || "")}</p>
+           <p class="combo-meta">${this.liveNoteMx()}</p>`;
       } else {
         const city = this.mx && this.mx.city;
         feed.innerHTML =
@@ -337,10 +603,13 @@
       bits.push(census.vintage || "Census 2011");
       bits.push("RBI HPI " + (city.rbi_hpi_all_india || "") + " " + (city.rbi_hpi_quarter || ""));
       bits.push("city 2BHK rent ₹" + d3.format(",")(city.rent_2bhk_inr || 0));
+      bits.push("NMMC OSM 13180880");
+      bits.push("KSC envelope schematic");
       return bits.join(" · ");
     },
 
-    drawMap() {
+    drawMap(opts) {
+      opts = opts || {};
       const title = document.getElementById("map-title");
       const hint = document.getElementById("map-hint");
       const m = this.metricDef();
@@ -351,19 +620,30 @@
       }
       if (hint) {
         hint.textContent = this.place === "va"
-          ? (m.live ? "Live Zillow / Census · each shape is a county or independent city" : "Yearly overlay · each shape is a county or independent city")
-          : "Each shape is a BMC administrative ward · ready reckoner + Census 2011 stock";
+          ? (m.live ? "Live Zillow / Census · hover to spotlight · click to lock" : "Yearly overlay · hover to spotlight · click to lock")
+          : "BMC 24 wards · Navi Mumbai · Mumbai 3.0 (schematic) · hover to spotlight";
       }
       if (!global.HousingMaps || !this.geo()) return;
       try {
         HousingMaps.draw({
+          place: this.place,
           geo: this.geo(),
-          rows: this.rows().map((r) => Object.assign({}, r, { label: r.name })),
+          rows: this.rows().map((r) => Object.assign({}, r, { label: r.label || r.name })),
           idKey: this.idKey(),
           metric: m.id,
           kind: m.kind,
           metricLabel: m.label,
           selectedId: this.selectedId,
+          compareId: this.compareId,
+          pairId: this.pairId,
+          callouts: this.callouts || [],
+          dim: this.dim,
+          camera: this.camera || "wide",
+          force: !!opts.full,
+          wipe: !!opts.wipe,
+          fly: !!opts.fly,
+          hold: !!opts.hold,
+          camT: opts.fly || opts.hold ? 1 : (global.HousingCine ? HousingCine.progress(HousingCine.scenes[HousingCine.i]) : 1),
           onSelect: (id) => this.select(id),
           tip: (event, html) => this.tip(html, event && event.clientX, event && event.clientY)
         });
@@ -390,11 +670,27 @@
             : "Left: rent×price path. Right: index 10y ago = 100. Cone is CAGR ± yearly volatility. Not a 5-year official forecast.";
         }
         try {
-          HousingPath.drawWalk({ row: w, rows: this.rows(), tip });
-          HousingPath.drawFan({ row: w });
+          if (!w) {
+            const walkEl = document.getElementById("path-walk");
+            const fanEl = document.getElementById("path-fan");
+            if (walkEl) walkEl.innerHTML = "<p class=\"path-empty\">A county is not locked yet. The map is the state.</p>";
+            if (fanEl) fanEl.innerHTML = "";
+          } else {
+          const cmp = this.compareId && this.rows().find((r) => String(r.fips) === String(this.compareId));
+          HousingPath.drawWalk({
+            row: w,
+            rows: this.rows(),
+            compareRow: cmp && String(cmp.fips) !== String(w.fips) ? cmp : null,
+            yearIndex: this.scrubIndex,
+            onYear: (i) => this.setScrub(i),
+            tip
+          });
+          HousingPath.drawFan({ row: w, yearIndex: this.scrubIndex });
+          }
         } catch (err) {
           console.warn("time fail", err);
         }
+        this.syncScrub();
       } else {
         const leftH = document.getElementById("time-h-left");
         const rightH = document.getElementById("time-h-right");
@@ -415,9 +711,10 @@
             onSelect: (id) => this.select(id),
             tip
           });
-        } catch (err) {
-          console.warn("mx time fail", err);
-        }
+          } catch (err) {
+            console.warn("mx time fail", err);
+          }
+          this.syncScrub();
       }
     },
 

@@ -7,12 +7,33 @@
 (function (global) {
   "use strict";
 
-  const INK = "#2c2824";
-  const MUTED = "#7a7168";
-  const HOME = "#9c5a4e";
-  const RENT = "#7d9a86";
   const FONT = '"Source Sans 3", "Segoe UI", sans-serif';
+  let INK = "#2c2824";
+  let MUTED = "#7a7168";
+  let HOME = "#9c5a4e";
+  let RENT = "#7d9a86";
+  let GRID = "#e0d6c8";
+  let PEER = "#cfc3b3";
   const parseDate = d3.timeParse("%Y-%m-%d");
+
+  function useTheme() {
+    const dark = document.body.classList.contains("cine-page");
+    if (dark) {
+      INK = "#f4ece2";
+      MUTED = "#9a9086";
+      HOME = "#c48962";
+      RENT = "#7d9a86";
+      GRID = "#3d372f";
+      PEER = "#4a433c";
+    } else {
+      INK = "#2c2824";
+      MUTED = "#7a7168";
+      HOME = "#9c5a4e";
+      RENT = "#7d9a86";
+      GRID = "#e0d6c8";
+      PEER = "#cfc3b3";
+    }
+  }
 
   function sizeOf(id, minH) {
     const el = document.getElementById(id);
@@ -109,6 +130,7 @@
   }
 
   function drawWalk(opts) {
+    useTheme();
     const { el, width, height } = sizeOf("path-walk", 300);
     if (!el) return;
     const row = opts.row;
@@ -117,6 +139,10 @@
       empty(el, "This county has too little overlapping ZHVI + ZORI history for a 10-year rent×price walk.");
       return;
     }
+    const maxI = walk.length - 1;
+    const yearIndex = Number.isFinite(opts.yearIndex) ? Math.max(0, Math.min(maxI, opts.yearIndex)) : maxI;
+    const shown = walk.slice(0, yearIndex + 1);
+    const play = shown[shown.length - 1];
     el.innerHTML = "";
     const pad = { t: 18, r: 16, b: 36, l: 52 };
     const innerW = width - pad.l - pad.r;
@@ -145,7 +171,7 @@
       g.append("line")
         .attr("x1", x(p0[0])).attr("y1", y(p0[1]))
         .attr("x2", x(p1[0])).attr("y2", y(p1[1]))
-        .attr("stroke", "#e0d6c8").attr("stroke-dasharray", "3 4").attr("stroke-width", 1);
+        .attr("stroke", GRID).attr("stroke-dasharray", "3 4").attr("stroke-width", 1);
       g.append("text")
         .attr("x", x(p1[0]) - 4).attr("y", y(p1[1]) + 10)
         .attr("text-anchor", "end").attr("fill", MUTED).attr("font-size", 10).attr("font-family", FONT)
@@ -171,31 +197,49 @@
       .join("circle")
       .attr("class", "peer")
       .attr("cx", (d) => x(d.rent)).attr("cy", (d) => y(d.home))
-      .attr("r", 2.4).attr("fill", "#cfc3b3").attr("opacity", 0.7);
+      .attr("r", 2.4).attr("fill", PEER).attr("opacity", 0.7);
 
     const line = d3.line().x((d) => x(d.rent)).y((d) => y(d.home)).curve(d3.curveCatmullRom.alpha(0.5));
-    g.append("path").attr("d", line(walk)).attr("fill", "none").attr("stroke", HOME).attr("stroke-width", 2.2);
+
+    const cmp = opts.compareRow ? alignedWalk(opts.compareRow.zhviSeries, opts.compareRow.zoriSeries) : [];
+    if (cmp.length > 2) {
+      g.append("path").attr("d", line(cmp)).attr("fill", "none").attr("stroke", "#8d7e92")
+        .attr("stroke-width", 1.7).attr("opacity", 0.7);
+      const cl = cmp[cmp.length - 1];
+      g.append("text").attr("x", x(cl.rent) + 6).attr("y", y(cl.home) - 8)
+        .attr("fill", "#8d7e92").attr("font-size", 10).attr("font-family", FONT)
+        .text(opts.compareRow.name);
+    }
+
+    g.append("path").attr("d", line(walk)).attr("fill", "none").attr("stroke", HOME)
+      .attr("stroke-width", 1.2).attr("opacity", 0.22);
+    g.append("path").attr("d", line(shown)).attr("fill", "none").attr("stroke", HOME).attr("stroke-width", 2.2);
 
     const col = d3.scaleLinear().domain([walk[0].year, walk[walk.length - 1].year]).range(["#7d9a86", HOME]);
     g.selectAll("circle.step")
       .data(walk)
       .join("circle")
+      .attr("class", "step")
       .attr("cx", (d) => x(d.rent)).attr("cy", (d) => y(d.home))
-      .attr("r", (d, i) => i === walk.length - 1 ? 5.5 : 3)
-      .attr("fill", (d) => col(d.year))
-      .attr("stroke", "#fffdf8").attr("stroke-width", 1);
+      .attr("r", (d, i) => i === yearIndex ? 6 : (i === walk.length - 1 ? 4 : 3))
+      .attr("fill", (d, i) => i > yearIndex ? GRID : col(d.year))
+      .attr("stroke", (d, i) => i === yearIndex ? INK : GRID).attr("stroke-width", 1)
+      .style("cursor", "pointer")
+      .on("click", (event, d) => {
+        if (opts.onYear) opts.onYear(walk.indexOf(d));
+      });
 
     const first = walk[0];
     const last = walk[walk.length - 1];
     g.append("text").attr("x", x(first.rent) + 6).attr("y", y(first.home) - 6)
       .attr("fill", MUTED).attr("font-size", 10).attr("font-family", FONT).text(first.year);
-    g.append("text").attr("x", x(last.rent) + 8).attr("y", y(last.home) + 4)
+    g.append("text").attr("x", x(play.rent) + 8).attr("y", y(play.home) + 4)
       .attr("fill", INK).attr("font-size", 11).attr("font-family", FONT).attr("font-weight", 600)
-      .text("now · " + last.year);
+      .text((yearIndex === maxI ? "now · " : "") + play.year);
 
     const homeP = project(row.zhviSeries, { officialYoy: row.zhvfYoy, years: 5 });
     const rentP = project(row.zoriSeries, { years: 5 });
-    if (homeP && rentP && homeP.y5 && rentP.y5) {
+    if (yearIndex === maxI && homeP && rentP && homeP.y5 && rentP.y5) {
       const fut = [
         { rent: last.rent, home: last.home },
         { rent: rentP.fan[0].mid, home: homeP.fan[0].mid },
@@ -211,7 +255,7 @@
         .text("+5y trend");
     }
 
-    g.selectAll("circle.peer, circle.step").style("cursor", "default")
+    g.selectAll("circle.peer, circle.step").style("cursor", "pointer")
       .on("mousemove", (event, d) => {
         if (!opts.tip) return;
         if (d.home && d.rent && d.year) {
@@ -226,6 +270,7 @@
   }
 
   function drawFan(opts) {
+    useTheme();
     const { el, width, height } = sizeOf("path-fan", 300);
     if (!el) return;
     const row = opts.row;
@@ -266,9 +311,22 @@
 
     const now = homeP.last.t || parseDate(homeP.last.date);
     g.append("line").attr("x1", x(now)).attr("x2", x(now)).attr("y1", 0).attr("y2", innerH)
-      .attr("stroke", "#e0d6c8").attr("stroke-width", 1);
+      .attr("stroke", GRID).attr("stroke-width", 1);
     g.append("text").attr("x", x(now) + 4).attr("y", 10)
       .attr("fill", MUTED).attr("font-size", 10).attr("font-family", FONT).text("now");
+
+    if (Number.isFinite(opts.yearIndex)) {
+      const walk = alignedWalk(row.zhviSeries, row.zoriSeries);
+      const maxI = Math.max(0, walk.length - 1);
+      const i = Math.max(0, Math.min(maxI, opts.yearIndex));
+      const pt = walk[i];
+      if (pt && pt.t && i < maxI) {
+        g.append("line").attr("x1", x(pt.t)).attr("x2", x(pt.t)).attr("y1", 0).attr("y2", innerH)
+          .attr("stroke", INK).attr("stroke-width", 1.1).attr("stroke-dasharray", "3 3").attr("opacity", 0.55);
+        g.append("text").attr("x", x(pt.t) + 4).attr("y", 22)
+          .attr("fill", INK).attr("font-size", 10).attr("font-family", FONT).text(String(pt.year));
+      }
+    }
 
     const area = d3.area().x((d) => x(d.t)).y0((d) => y(d.lo)).y1((d) => y(d.hi)).curve(d3.curveMonotoneX);
     const ln = d3.line().x((d) => x(d.t)).y((d) => y(d.v != null ? d.v : d.mid)).curve(d3.curveMonotoneX);
@@ -322,7 +380,8 @@
   }
 
   function drawMxLadder(opts) {
-    const { el, width, height } = sizeOf("path-walk", 300);
+    useTheme();
+    const { el, width, height } = sizeOf("path-ladder", 300);
     if (!el) return;
     const rows = (opts.rows || []).filter((r) => Number.isFinite(r.asr_psf))
       .slice().sort((a, b) => b.asr_psf - a.asr_psf);
@@ -383,7 +442,8 @@
   }
 
   function drawMxStock(opts) {
-    const { el, width, height } = sizeOf("path-fan", 300);
+    useTheme();
+    const { el, width, height } = sizeOf("path-stock", 300);
     if (!el) return;
     const rows = (opts.rows || []).filter((r) => Number.isFinite(r.asr_psf) && Number.isFinite(r.households));
     if (!rows.length) { empty(el, "Census households missing."); return; }
@@ -416,7 +476,7 @@
       .attr("r", (d) => d.id === opts.selectedId ? 7 : 4.5)
       .attr("fill", (d) => d.region === "Island City" ? HOME : RENT)
       .attr("opacity", (d) => d.id === opts.selectedId ? 1 : 0.8)
-      .attr("stroke", (d) => d.id === opts.selectedId ? INK : "#fffdf8")
+      .attr("stroke", (d) => d.id === opts.selectedId ? INK : GRID)
       .attr("stroke-width", (d) => d.id === opts.selectedId ? 1.4 : 0.8)
       .style("cursor", "pointer")
       .on("click", (event, d) => { if (opts.onSelect) opts.onSelect(d.id); })
@@ -442,8 +502,8 @@
 
   function styleAxis(sel) {
     sel.selectAll("text").attr("font-family", FONT).attr("fill", MUTED).attr("font-size", 10);
-    sel.selectAll("line, path").attr("stroke", "#e0d6c8");
-    sel.select(".domain").attr("stroke", "#e0d6c8");
+    sel.selectAll("line, path").attr("stroke", GRID);
+    sel.select(".domain").attr("stroke", GRID);
   }
 
   global.HousingPath = { drawWalk, drawFan, drawMxLadder, drawMxStock, project, yearly, alignedWalk };
