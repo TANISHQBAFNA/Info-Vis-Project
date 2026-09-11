@@ -3,18 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Virginia and Mumbai — live housing indices</title>
+  <title>Virginia and Mumbai housing, side by side</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect fill='%23161310' width='64' height='64'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='%23d4c2a0' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='6' fill='%237ea08c'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=film-10">
+  <link rel="stylesheet" href="assets/css/style.css?v=echo-2">
 </head>
 <body class="housing-page cine-page">
   <div id="boot-screen">
     <div class="boot-letterbox" aria-hidden="true"></div>
-    <p class="boot-kicker">CS5764 · Information visualization</p>
-    <p class="boot-title">A house is years of rent, stacked</p>
+    <p class="boot-kicker">Virginia and Mumbai housing, side by side</p>
+    <p class="boot-title">A home can cost many years of rent. That number tells the real story.</p>
+    <p class="boot-sub">One state with a 10-year price walk. One city with a stamp-duty floor. Same question: how far apart are the homes?</p>
     <p id="boot-log" class="boot-log">Fetching live Zillow and Census…</p>
     <div class="boot-letterbox boot-letterbox-b" aria-hidden="true"></div>
   </div>
@@ -58,7 +59,7 @@
 
         <div class="film-picture" data-stage="walk" id="stage-walk">
           <div class="film-stage-head">
-            <p class="film-stage-kicker" id="time-h-left">Walk · rent × home value</p>
+            <p class="film-stage-kicker" id="time-h-left">Home price vs rent</p>
             <div class="cine-scrub" id="year-scrub-wrap" hidden>
               <button type="button" class="hud-btn cine-play" id="btn-play-years">Play years</button>
               <label class="cine-scrub-label" for="year-scrub">Year <span id="year-scrub-label">now</span></label>
@@ -70,7 +71,7 @@
 
         <div class="film-picture" data-stage="cone" id="stage-cone">
           <div class="film-stage-head">
-            <p class="film-stage-kicker" id="time-h-right">Index · 10y ago = 100, then a cone</p>
+            <p class="film-stage-kicker" id="time-h-right">10-year index (start = 100) + short forecast</p>
             <p class="film-stage-note" id="time-hint">Zillow metro year 1, then a trend</p>
           </div>
           <h2 id="time-title" class="film-sr">10-year walk and 5-year cone</h2>
@@ -79,7 +80,7 @@
 
         <div class="film-picture" data-stage="ladder" id="stage-ladder">
           <div class="film-stage-head">
-            <p class="film-stage-kicker">Ready reckoner · 24 wards</p>
+            <p class="film-stage-kicker">Stamp-duty floor · 24 BMC wards</p>
             <p class="film-stage-note">Stamp-duty floor, tallest first</p>
           </div>
           <div id="path-ladder" class="chart-mount film-chart"></div>
@@ -88,7 +89,7 @@
         <div class="film-picture" data-stage="stock" id="stage-stock">
           <div class="film-stage-head">
             <p class="film-stage-kicker">Census 2011 · households vs floor</p>
-            <p class="film-stage-note">Island in clay, suburbs in sage</p>
+            <p class="film-stage-note">Island and suburbs</p>
           </div>
           <div id="path-stock" class="chart-mount film-chart"></div>
         </div>
@@ -97,94 +98,94 @@
       </div>
 
       <div class="cine-rail" id="cine-rail">
-        <article class="cine-scene is-fly is-on" id="scene-state" data-place="va" data-metric="zhvi" data-select="none" data-camera="wide" data-stage="map" data-kicker="The state">
-          <p class="cine-chap">01 · Establishing</p>
-          <h2>Virginia is not one housing market.</h2>
-          <p>Color is a typical home, live from Zillow, for every county and independent city. The strip below is that same list, sorted. Scroll — the camera goes in on the two ends.</p>
+        <article class="cine-scene is-fly is-on" id="scene-state" data-place="va" data-metric="zhvi" data-select="none" data-camera="wide" data-stage="map" data-kicker="Virginia">
+          <p class="cine-chap">01 · Virginia</p>
+          <h2>Virginia is many housing markets in one state.</h2>
+          <p>Color is today’s typical home price by county (Zillow). Scroll to see the richest and poorest ends.</p>
         </article>
 
-        <article class="cine-scene is-fly" id="scene-peak" data-place="va" data-metric="zhvi" data-select="51610" data-camera="tight" data-dim="story" data-stage="map" data-kicker="The ceiling">
+        <article class="cine-scene is-fly" id="scene-peak" data-place="va" data-metric="zhvi" data-select="51610" data-camera="tight" data-dim="story" data-stage="map" data-kicker="Falls Church">
           <p class="cine-chap">02 · Falls Church</p>
-          <h2>The ceiling is a city you can miss on the map.</h2>
-          <p>Independent city, Northern Virginia. A typical home here is the top of this commonwealth. The line is ten years of ZHVI — not a listing, the same index as the color.</p>
+          <h2>Falls Church is the top of Virginia.</h2>
+          <p>Independent city. Highest typical home on this map. The line is 10 years of the same Zillow index.</p>
         </article>
 
-        <article class="cine-scene is-fly" id="scene-floor" data-place="va" data-metric="zhvi" data-select="51027" data-camera="tight" data-dim="story" data-stage="map" data-kicker="The floor">
+        <article class="cine-scene is-fly" id="scene-floor" data-place="va" data-metric="zhvi" data-select="51027" data-camera="tight" data-dim="story" data-stage="map" data-kicker="Buchanan">
           <p class="cine-chap">03 · Buchanan</p>
-          <h2>Drive west. Same state. Same instrument.</h2>
-          <p>Coalfields. Cheapest typical home on this map. The 10-year line is the same ZHVI series as Falls Church. If the ceiling compounded, the floor had a different decade.</p>
+          <h2>Buchanan County is the bottom of Virginia.</h2>
+          <p>Same state. Same price index. A very different decade.</p>
         </article>
 
-        <article class="cine-scene is-fly" id="scene-spread" data-place="va" data-metric="zhvi" data-select="51610" data-pair="51027" data-camera="wide" data-dim="story" data-stage="map" data-kicker="The spread">
+        <article class="cine-scene is-fly" id="scene-spread" data-place="va" data-metric="zhvi" data-select="51610" data-pair="51027" data-camera="wide" data-dim="story" data-stage="map" data-kicker="Pull back">
           <p class="cine-chap">04 · Pull back</p>
-          <h2>Fifteen times apart, still one commonwealth.</h2>
-          <p>Two marks stay lit. Indexed to 100 at the start of the decade: did the gap widen or close? That is a finding the map alone cannot say.</p>
+          <h2>About fifteen times apart — still one state.</h2>
+          <p>Two places stay lit. Indexed to 100 ten years ago: did the gap grow or shrink?</p>
         </article>
 
-        <article class="cine-scene" id="scene-fairfax" data-place="va" data-metric="zhvi" data-select="51059" data-camera="medium" data-dim="story" data-stage="map" data-kicker="The bet">
+        <article class="cine-scene" id="scene-fairfax" data-place="va" data-metric="zhvi" data-select="51059" data-camera="medium" data-dim="story" data-stage="map" data-kicker="Fairfax">
           <p class="cine-chap">05 · Fairfax</p>
-          <h2>Most of the expensive story sits here.</h2>
-          <p>Not the peak, not the floor. Northern Virginia’s typical home — live ZHVI against live ZORI. Clay is the house. Sage is the rent. The rest of the Virginia act holds on this county.</p>
+          <h2>Fairfax carries most of the expensive story.</h2>
+          <p>Not the peak, not the floor. Home price (clay) next to rent (sage), live from Zillow.</p>
         </article>
 
-        <article class="cine-scene" id="scene-years" data-place="va" data-metric="years_rent" data-select="51059" data-camera="medium" data-dim="story" data-stage="map" data-kicker="Years, not dollars">
+        <article class="cine-scene" id="scene-years" data-place="va" data-metric="years_rent" data-select="51059" data-camera="medium" data-dim="story" data-stage="map" data-kicker="The ratio">
           <p class="cine-chap">06 · The ratio</p>
-          <h2>The house is years of rent, stacked.</h2>
-          <p>Same county, new color: ZHVI ÷ (ZORI × 12). The inset walks that ratio year by year. If the number rose, buying with rent got harder even when both lines went up.</p>
+          <h2>How many years of rent equal one home?</h2>
+          <p>Home price ÷ (monthly rent × 12). If that number rose, buying got harder even when both prices and rents went up.</p>
         </article>
 
-        <article class="cine-scene" id="scene-cone" data-place="va" data-metric="zhvi" data-select="51059" data-camera="medium" data-dim="story" data-stage="map" data-kicker="What next year may say">
+        <article class="cine-scene" id="scene-cone" data-place="va" data-metric="zhvi" data-select="51059" data-camera="medium" data-dim="story" data-stage="map" data-kicker="Next year">
           <p class="cine-chap">07 · Next year</p>
-          <h2>The metro may speak for next year. Not for 2031.</h2>
-          <p>Index 10 years ago = 100. Solid is observed ZHVI. The cone is year-1 Zillow metro (Washington, DC) then a trailing CAGR band. A trend extension — not a priced 5-year model. The map stays.</p>
+          <h2>A short forecast is not a five-year promise.</h2>
+          <p>Solid line = past prices. Cone = near-term metro trend. Use it for next year, not for 2031.</p>
         </article>
 
-        <article class="cine-scene is-fly" id="scene-cut" data-place="mumbai" data-metric="asr_psf" data-select="none" data-camera="bmc" data-stage="map" data-kicker="Cut">
+        <article class="cine-scene is-fly" id="scene-cut" data-place="mumbai" data-metric="asr_psf" data-select="none" data-camera="bmc" data-stage="map" data-kicker="BMC">
           <p class="cine-chap">08 · BMC</p>
-          <h2>Mumbai does not publish that walk.</h2>
-          <p>No 10-year ward price. The ladder is this year’s stamp-duty floor for 24 BMC wards, tallest first. Frozen FY 2026-27 at 0% revision. Across the creek, two more Mumbais wait — without even this.</p>
+          <h2>Mumbai does not publish a 10-year ward price walk.</h2>
+          <p>What it does publish: this year’s stamp-duty floor for 24 BMC wards (ready reckoner). Tallest bar = highest floor.</p>
         </article>
 
-        <article class="cine-scene is-fly" id="scene-east" data-place="mumbai" data-metric="asr_psf" data-select="M/E" data-camera="tight" data-dim="story" data-stage="map" data-kicker="The east">
+        <article class="cine-scene is-fly" id="scene-east" data-place="mumbai" data-metric="asr_psf" data-select="M/E" data-camera="tight" data-dim="story" data-stage="map" data-kicker="M East">
           <p class="cine-chap">09 · M East</p>
-          <h2>Start where the floor is low and the count is high.</h2>
-          <p>Eastern suburbs. Ready reckoner, not a listing. Rank among 24, 2011 households, and years of citywide 2BHK rent against a 1,000 ft² RR floor — city rent, ward floor. Two different geographies in one ratio.</p>
+          <h2>M East: low floor, many households.</h2>
+          <p>Eastern suburbs. Ready reckoner, not a listing. Rank, 2011 households, and years of citywide 2BHK rent vs a 1,000 ft² floor.</p>
         </article>
 
-        <article class="cine-scene is-fly" id="scene-hill" data-place="mumbai" data-metric="asr_psf" data-select="D" data-camera="tight" data-dim="story" data-stage="map" data-kicker="The island peak">
+        <article class="cine-scene is-fly" id="scene-hill" data-place="mumbai" data-metric="asr_psf" data-select="D" data-camera="tight" data-dim="story" data-stage="map" data-kicker="Malabar Hill">
           <p class="cine-chap">10 · Malabar Hill</p>
-          <h2>Same instrument. The top of 24.</h2>
-          <p>Ward D. The camera crossed the harbour inside BMC. The ready reckoner did not change method. The highlighted bar is this ward against every other floor on the island and in the suburbs.</p>
+          <h2>Malabar Hill (Ward D) is the top of the 24.</h2>
+          <p>Same ready-reckoner method. Highlighted against every other BMC ward.</p>
         </article>
 
-        <article class="cine-scene is-fly" id="scene-flat" data-place="mumbai" data-metric="floor_1000" data-select="D" data-pair="M/E" data-camera="pair" data-dim="story" data-stage="map" data-kicker="A flat">
+        <article class="cine-scene is-fly" id="scene-flat" data-place="mumbai" data-metric="floor_1000" data-select="D" data-pair="M/E" data-camera="pair" data-dim="story" data-stage="map" data-kicker="Two homes">
           <p class="cine-chap">11 · Two homes</p>
-          <h2>Not a hectare. A thousand square feet.</h2>
-          <p>Color is the ready-reckoner value of 1,000 carpet ft². That is the BMC version of Falls Church / Buchanan — a home, not a hectare. City 2BHK rent sits under the bars, unmapped, so the years-of-rent ratio stays honest.</p>
+          <h2>Compare a home, not a hectare.</h2>
+          <p>Color = ready-reckoner value of 1,000 carpet ft². That matches Falls Church / Buchanan as “a home.”</p>
         </article>
 
-        <article class="cine-scene is-fly" id="scene-harbour" data-place="mumbai" data-metric="asr_psf" data-select="none" data-callouts="D,NM,M3" data-camera="metro" data-dim="story" data-stage="map" data-kicker="Three Mumbais">
+        <article class="cine-scene is-fly" id="scene-harbour" data-place="mumbai" data-metric="asr_psf" data-select="none" data-callouts="D,NM,M3" data-camera="metro" data-dim="story" data-stage="map" data-kicker="Harbour">
           <p class="cine-chap">12 · Harbour</p>
-          <h2>The camera crosses the creek.</h2>
-          <p>BMC is the city with a rate. Navi Mumbai is the city CIDCO already built. Mumbai 3.0 is a new town on 124 villages — a plan, not a floor. Three shapes. Three data regimes. One metropolitan bet.</p>
+          <h2>Three Mumbais sit across the harbour.</h2>
+          <p>BMC has rates. Navi Mumbai is already a planned city with people. Mumbai 3.0 is a new plan on 124 villages — not a floor yet.</p>
         </article>
 
-        <article class="cine-scene is-fly" id="scene-navi" data-place="mumbai" data-metric="asr_psf" data-select="NM" data-camera="tight" data-dim="story" data-stage="map" data-kicker="The second city">
+        <article class="cine-scene is-fly" id="scene-navi" data-place="mumbai" data-metric="asr_psf" data-select="NM" data-camera="tight" data-dim="story" data-stage="map" data-kicker="Navi Mumbai">
           <p class="cine-chap">13 · Navi Mumbai</p>
-          <h2>This city was planned. It already has people.</h2>
-          <p>NMMC. CIDCO 1971, corporation 1992. Census 2011 people and households against BMC’s 2011 stock. Node-level ready reckoner exists — Vashi, Nerul, Kharghar — and is not compiled here. The missing number is the mapped floor.</p>
+          <h2>Navi Mumbai was planned — and people already live there.</h2>
+          <p>Census 2011 people and households vs BMC. Node-level ready reckoner exists (Vashi, Nerul, Kharghar) but is not on this map.</p>
         </article>
 
-        <article class="cine-scene is-fly" id="scene-m3" data-place="mumbai" data-metric="asr_psf" data-select="M3" data-camera="tight" data-dim="story" data-stage="map" data-kicker="The third city">
+        <article class="cine-scene is-fly" id="scene-m3" data-place="mumbai" data-metric="asr_psf" data-select="M3" data-camera="tight" data-dim="story" data-stage="map" data-kicker="Mumbai 3.0">
           <p class="cine-chap">14 · Mumbai 3.0</p>
-          <h2>323 square kilometres. No stamp-duty floor yet.</h2>
-          <p>Karnala–Sai–Chirner. MMRDA notified 15 Oct 2024. Area against NMMC’s. Dashed because the envelope is schematic, not a cadastral NTDA sheet. A planning object. Near Atal Setu, the new airport, the port.</p>
+          <h2>Mumbai 3.0 is a plan, not a price floor yet.</h2>
+          <p>About 323 km². Notified Oct 2024. Near Atal Setu, the new airport, and the port.</p>
         </article>
 
-        <article class="cine-scene" id="scene-coda" data-place="mumbai" data-metric="asr_psf" data-select="none" data-callouts="D,NM,M3" data-camera="metro" data-dim="story" data-stage="map" data-kicker="Two instruments">
+        <article class="cine-scene" id="scene-coda" data-place="mumbai" data-metric="asr_psf" data-select="none" data-callouts="D,NM,M3" data-camera="metro" data-dim="story" data-stage="map" data-kicker="Two kinds of data">
           <p class="cine-chap">15 · Close</p>
-          <h2>Two metros. Two instruments. Three Mumbais.</h2>
-          <p>Virginia published a 10-year walk, so the gap can move in time. Mumbai published a floor, a census, and a plan. The bars compare range: ZHVI max/min against ASR max/min. Not the same kind of inequality — and that is the point. Scroll back. The camera still flies.</p>
+          <h2>Two metros. Two kinds of data. Three Mumbais.</h2>
+          <p>Virginia can show how the gap moved over 10 years. Mumbai can show today’s floor, a census count, and a plan. The bars compare ranges — not the same kind of inequality. That difference is the finding.</p>
         </article>
       </div>
     </div>
@@ -195,11 +196,11 @@
   <div id="mc-tooltip" class="mc-tooltip" role="tooltip" hidden></div>
 
   <script src="https://d3js.org/d3.v7.min.js"></script>
-  <script src="assets/js/housing-maps.js?v=film-10"></script>
-  <script src="assets/js/housing-path.js?v=film-10"></script>
-  <script src="assets/js/housing-live.js?v=film-10"></script>
-  <script src="assets/js/housing-rail.js?v=film-10"></script>
-  <script src="assets/js/housing.js?v=film-10"></script>
-  <script src="assets/js/housing-cine.js?v=film-10"></script>
+  <script src="assets/js/housing-maps.js?v=echo-2"></script>
+  <script src="assets/js/housing-path.js?v=echo-2"></script>
+  <script src="assets/js/housing-live.js?v=echo-2"></script>
+  <script src="assets/js/housing-rail.js?v=echo-2"></script>
+  <script src="assets/js/housing.js?v=echo-2"></script>
+  <script src="assets/js/housing-cine.js?v=echo-2"></script>
 </body>
 </html>
