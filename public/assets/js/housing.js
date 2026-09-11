@@ -391,7 +391,7 @@
         value = HousingMaps.fmt(d3.median(vals), m.kind);
         note = "Stamp-duty floor. Two more cities sit east.";
       } else if (this.place === "mumbai" && (this.callouts || []).length) {
-        name = "Island · Creek · Frontier";
+        name = "BMC · Navi Mumbai · Mumbai 3.0";
         metric = "Three Mumbais";
         value = "BMC · NMMC · KSC";
         note = "Only BMC has a ready reckoner on this map";
@@ -466,10 +466,10 @@
       if (!feed) return;
       if (!w) {
         if (title) title.textContent = this.place === "va" ? "Virginia" : "Mumbai";
-        if (stamp) stamp.textContent = "Establishing shot";
+        if (stamp) stamp.textContent = "Overview";
         feed.innerHTML = this.place === "va"
-          ? `<p class="intel-lede">133 counties and independent cities. Color is Zillow’s typical home (ZHVI), live. Scroll to go in — the ceiling, then the floor, then the county that holds most of the expensive story.</p>`
-          : `<p class="intel-lede">Three Mumbais. BMC has a stamp-duty floor. Navi Mumbai already has people. Mumbai 3.0 is a plan on 124 villages. The camera holds the city with a rate, then crosses the creek.</p>`;
+          ? `<p class="intel-lede">133 counties and independent cities. Color is Zillow’s typical home, live. Scroll to see the richest and poorest ends, then Fairfax — where most of the expensive story sits.</p>`
+          : `<p class="intel-lede">Three Mumbais. BMC has a stamp-duty floor. Navi Mumbai already has people. Mumbai 3.0 is a plan on 124 villages.</p>`;
         return;
       }
       if (title) title.textContent = w.name;
@@ -662,8 +662,8 @@
         const leftH = document.getElementById("time-h-left");
         const rightH = document.getElementById("time-h-right");
         if (title) title.textContent = (w ? w.name : "County") + " · 10-year walk and 5-year cone";
-        if (leftH) leftH.textContent = "Walk · rent × home value";
-        if (rightH) rightH.textContent = "Index · 10y ago = 100, then a cone";
+        if (leftH) leftH.textContent = "Home price vs rent";
+        if (rightH) rightH.textContent = "10-year index (start = 100) + short forecast";
         if (hint) {
           hint.textContent = Number.isFinite(w && w.zhvfYoy)
             ? "Left: rent×price path (iso-yield diagonals). Right: index 10y ago = 100. Dashed = trend; Y1 home uses Zillow metro forecast."

@@ -101,7 +101,7 @@
         ],
         kicker: "Typical home, every county, this month",
         take: isNum(spread)
-          ? "Finding: a “Virginia home” spans " + d3.format(".1f")(spread) + "× from floor to ceiling. Color is that distance."
+          ? "Finding: a “Virginia home” spans " + d3.format(".1f")(spread) + "× from richest to poorest. Color is that distance."
           : "Finding: the spread is the story — not a statewide average.",
         chart: (el) => drawStrip(el, priced.map((r) => r.zhvi), { lo: min && min.zhvi, hi: max && max.zhvi, unit: "usd" })
       };
@@ -119,7 +119,7 @@
         kicker: "Falls Church · 10-year typical home",
         take: isNum(cagr)
           ? "Finding: the smallest shape on the map compounded about " + d3.format(".1f")(cagr) + "% a year for a decade."
-          : "Finding: the ceiling is an independent city, not a county.",
+          : "Finding: Falls Church is an independent city, not a county.",
         chart: (el) => drawSeries(el, [{ name: "ZHVI", pts: yearlyPts(fc), color: HOME }], { kind: "usd" })
       };
     }
@@ -136,8 +136,8 @@
         ],
         kicker: "Buchanan · 10-year typical home",
         take: isNum(ratio)
-          ? "Finding: same commonwealth, same instrument. Falls Church is " + d3.format(".1f")(ratio) + "× Buchanan tonight."
-          : "Finding: the floor is west, in the coalfields.",
+          ? "Finding: same state, same Zillow index. Falls Church is " + d3.format(".1f")(ratio) + "× Buchanan tonight."
+          : "Finding: Buchanan County is the bottom of Virginia.",
         chart: (el) => drawSeries(el, [{ name: "ZHVI", pts: yearlyPts(bu), color: RENT }], { kind: "usd" })
       };
     }
@@ -147,8 +147,8 @@
       const nowRatio = (fc && bu && bu.zhvi) ? fc.zhvi / bu.zhvi : null;
       return {
         facts: [
-          { k: "Ceiling now", v: fmt(fc && fc.zhvi, "usd"), s: short(fc && fc.name) },
-          { k: "Floor now", v: fmt(bu && bu.zhvi, "usd"), s: short(bu && bu.name) },
+          { k: "Falls Church now", v: fmt(fc && fc.zhvi, "usd"), s: short(fc && fc.name) },
+          { k: "Buchanan now", v: fmt(bu && bu.zhvi, "usd"), s: short(bu && bu.name) },
           { k: "Gap 10y ago", v: isNum(agoRatio) ? d3.format(".1f")(agoRatio) + "×" : "—", s: "same two places" },
           { k: "Gap now", v: isNum(nowRatio) ? d3.format(".1f")(nowRatio) + "×" : "—", s: "live ZHVI" }
         ],
@@ -195,7 +195,7 @@
         take: isNum(delta)
           ? "Finding: the same county got " + d3.format(".1f")(Math.abs(delta)) + " years "
             + (delta > 0 ? "harder" : "easier") + " to buy with rent. The map is a clock."
-          : "Finding: the house is years of rent, stacked.",
+          : "Finding: a home can cost many years of rent.",
         chart: (el) => drawYears(el, fxWalk)
       };
     }
@@ -210,7 +210,7 @@
           { k: "+5y trend home", v: fmt(y5, "usd"), s: "not a priced model" },
           { k: "Fairfax now", v: fmt(fx && fx.zhvi, "usd"), s: "ZHVI" }
         ],
-        kicker: "Index · 10y ago = 100, then a 5-year cone",
+        kicker: "10-year index (start = 100) + short forecast",
         take: "Finding: year 1 is Zillow’s call for Washington, DC — not Washington, Indiana. Years 2–5 are the last decade, extended. A trend. Not 2031.",
         chart: (el) => drawFanMini(el, fx)
       };
@@ -260,7 +260,7 @@
         ],
         kicker: "Malabar Hill as a share of every BMC floor",
         take: isNum(asrSpread)
-          ? "Finding: same ready-reckoner method. Ward D is " + d3.format(".1f")(asrSpread) + "× the cheapest BMC floor. The instrument did not change. The floor did."
+          ? "Finding: same ready-reckoner method. Ward D is " + d3.format(".1f")(asrSpread) + "× the cheapest BMC stamp-duty floor."
           : "Finding: the top of 24.",
         chart: (el) => drawLadderMini(el, asr, "D")
       };
@@ -349,8 +349,8 @@
         { k: "Fairfax years", v: fmt(yearsNow, "years"), s: "rent stacked into a house" },
         { k: "NMMC people", v: fmt(navi && navi.pop, "count"), s: "already a city" }
       ],
-      kicker: "Two metros, two instruments",
-      take: "Finding: Virginia published a walk, so the gap can move in time. Mumbai published a floor, a census, and a plan — three regimes, not one market. Scroll back. The camera still flies.",
+      kicker: "Two metros. Two kinds of data.",
+      take: "Finding: Virginia can show how the gap moved over 10 years. Mumbai can show today’s floor, a census count, and a plan. The bars compare ranges — not the same kind of inequality.",
       chart: (el) => drawBars(el, [
         { name: "VA ZHVI spread", v: vaSpread, color: HOME },
         { name: "BMC ASR spread", v: asrSpread, color: GOLD }
