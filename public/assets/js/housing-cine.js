@@ -57,7 +57,7 @@
     },
 
     stacked() {
-      return global.matchMedia && matchMedia("(max-width: 1400px), ((any-pointer: coarse) and (max-width: 1500px))").matches;
+      return global.matchMedia && matchMedia("(max-width: 1100px)").matches;
     },
 
     stageH() {
