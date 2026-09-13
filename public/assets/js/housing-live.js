@@ -90,12 +90,18 @@
     async loadMumbai(onProgress) {
       const say = onProgress || function () {};
       say("Loading Mumbai ready-reckoner and census housing stock…");
-      const [geo, mxRows, mxCity, census] = await Promise.all([
+      const [geo, mxRows, mxCity, census, cities] = await Promise.all([
         d3.json("assets/data/housing/mumbai-wards.geojson"),
         d3.csv("assets/data/housing/mumbai-wards.csv", parseMx),
         d3.json("assets/data/housing/mumbai-city.json"),
-        d3.json("assets/data/housing/mumbai-census.json")
+        d3.json("assets/data/housing/mumbai-census.json"),
+        d3.json("assets/data/housing/mumbai-cities.json")
       ]);
+      const extra = [cities && cities.navi, cities && cities.m3].filter(Boolean).map((c) => Object.assign({
+        asr_sqm: null,
+        asr_psf: null
+      }, c));
+      extra.forEach((r) => mxRows.push(r));
       enrichMx(mxRows, mxCity, census);
       return {
         geo,
@@ -129,18 +135,19 @@
     const psfs = rows.map((r) => r.asr_psf).filter(Number.isFinite);
     const med = d3.median(psfs);
     const peak = d3.max(psfs);
-    const ranked = rows.slice().sort((a, b) => b.asr_psf - a.asr_psf);
+    const ranked = rows.filter((r) => Number.isFinite(r.asr_psf)).slice().sort((a, b) => b.asr_psf - a.asr_psf);
     ranked.forEach((r, i) => { r.asr_rank = i + 1; });
     rows.forEach((r) => {
       const c = byId[r.id] || {};
-      r.pop = c.pop;
-      r.households = c.households;
-      r.region = MX_ISLAND[r.id] ? "Island City" : "Suburbs";
+      if (!r.layer) r.layer = (r.id === "NM" ? "navi" : r.id === "M3" ? "m3" : "bmc");
+      if (r.pop == null) r.pop = c.pop;
+      if (r.households == null) r.households = c.households;
+      if (!r.region) r.region = r.layer === "navi" ? "Navi Mumbai" : r.layer === "m3" ? "Third Mumbai" : (MX_ISLAND[r.id] ? "Island City" : "Suburbs");
       r.floor_650 = Number.isFinite(r.asr_psf) ? r.asr_psf * MX_CARPET_1BHK : null;
       r.floor_1000 = Number.isFinite(r.asr_psf) ? r.asr_psf * MX_CARPET_2BHK : null;
       r.stamp_650 = r.floor_650 != null ? r.floor_650 * MX_STAMP : null;
-      r.vs_median = med ? 100 * r.asr_psf / med : null;
-      r.vs_peak = peak ? 100 * r.asr_psf / peak : null;
+      r.vs_median = (med && Number.isFinite(r.asr_psf)) ? 100 * r.asr_psf / med : null;
+      r.vs_peak = (peak && Number.isFinite(r.asr_psf)) ? 100 * r.asr_psf / peak : null;
       r.years_city_rent = (r.floor_1000 && rentYr) ? r.floor_1000 / rentYr : null;
       r.hh_per_cr = (r.households && r.floor_650) ? r.households : null;
     });

@@ -10,6 +10,10 @@
     "mumbai_rent": "city_only_omit_locality",
     "mumbai_rent_note": "No official locality rent ₹/sq ft. City KPI uses Magicbricks Mumbai Rent Index 2BHK average as a named research exception. Used only in the years-of-rent ratio against a ward 1,000 ft² RR floor.",
     "mumbai_stock": "census_2011_ward_households",
+    "mumbai_navi": "osm_nmmc_relation_13180880",
+    "mumbai_navi_note": "NMMC boundary is OSM relation 13180880 (ODbL). Census 2011 population/households for Navi Mumbai M Corp. Node-level IGR ASR is not compiled onto this map.",
+    "mumbai_m3": "mmrda_ksc_new_town_schematic",
+    "mumbai_m3_note": "Karnala–Sai–Chirner New Town, 323.44 km², 124 villages, MMRDA NTDA notified 15 Oct 2024. Envelope on the map is schematic, not a cadastral sheet. No ready reckoner.",
     "mumbai_city_index": "rbi_hpi",
     "refresh": "browser_fetch_plus_yearly_overlays",
     "refresh_note": "Zillow county CSVs, metro ZHVF, and Census Reporter ACS are fetched in the browser (CORS *) and cached ~12h. HUD FMR, Redfin PPSF, IGR ASR, and Census 2011 ward stock stay as small committed files. No weather. No HUD/Census/FRED keys in client JS."
@@ -52,8 +56,10 @@
     "U.S. Department of Housing and Urban Development, FY 2026 Fair Market Rents, 2-bedroom.",
     "Reserve Bank of India, House Price Index, base 2022-23, Q4:2025-26.",
     "Department of Registration and Stamps, Maharashtra, Annual Statement of Rates (ready reckoner), FY 2025-26 rates held for FY 2026-27.",
-    "Office of the Registrar General & Census Commissioner, India, Census 2011, ward population and households aggregated to 24 BMC administrative wards (OpenCity).",
+    "Office of the Registrar General & Census Commissioner, India, Census 2011, ward population and households aggregated to 24 BMC administrative wards (OpenCity), and Navi Mumbai M Corp. population/households.",
     "OpenCity / MCGM, BMC administrative ward boundaries (ODbL).",
+    "OpenStreetMap contributors, Navi Mumbai Municipal Corporation boundary, relation 13180880 (ODbL).",
+    "MMRDA, Karnala–Sai–Chirner (KSC) New Town / Mumbai 3.0, NTDA notified 15 Oct 2024. Map envelope is schematic, not a cadastral NTDA sheet.",
     "U.S. Census Bureau, cartographic county boundaries for Virginia."
   ]
 }
