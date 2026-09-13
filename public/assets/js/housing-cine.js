@@ -57,7 +57,7 @@
     },
 
     stacked() {
-      return global.matchMedia && matchMedia("(max-width: 1400px)").matches;
+      return global.matchMedia && matchMedia("(max-width: 1100px)").matches;
     },
 
     stageH() {
