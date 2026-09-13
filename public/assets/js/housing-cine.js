@@ -26,6 +26,11 @@
       this.bindScroll();
       this.apply(0, { fly: false });
       document.body.classList.add("is-cine-ready");
+      let fitT;
+      window.addEventListener("resize", () => {
+        clearTimeout(fitT);
+        fitT = setTimeout(() => this.scrollTo(this.scenes[this.i], 0), 180);
+      });
     },
 
     reduce() {
@@ -47,17 +52,45 @@
       });
     },
 
+    vh() {
+      return (global.visualViewport && visualViewport.height) || innerHeight;
+    },
+
+    stacked() {
+      return global.matchMedia && matchMedia("(max-width: 1400px)").matches;
+    },
+
+    stageH() {
+      if (!this.stacked()) return 0;
+      const stage = document.querySelector(".film-stage");
+      return stage ? stage.getBoundingClientRect().height : 0;
+    },
+
+    liveScene() {
+      return this.scenes[this.i] || null;
+    },
+
+    sceneCanConsume(dy) {
+      const el = this.liveScene();
+      if (!el) return false;
+      if (el.scrollHeight - el.clientHeight < 4) return false;
+      if (dy > 0 && el.scrollTop + el.clientHeight < el.scrollHeight - 2) return true;
+      if (dy < 0 && el.scrollTop > 1) return true;
+      return false;
+    },
+
     bindWheel() {
       let acc = 0;
       let last = 0;
       const onWheel = (e) => {
         if (e.ctrlKey) return;
+        const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * this.vh() : e.deltaY;
+        if (this.sceneCanConsume(dy)) return;
         e.preventDefault();
         if (Date.now() < this.lockUntil) return;
         const now = Date.now();
         if (now - last > 280) acc = 0;
         last = now;
-        const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * innerHeight : e.deltaY;
         acc += dy;
         if (acc > 56) {
           acc = 0;
@@ -69,17 +102,24 @@
       };
       window.addEventListener("wheel", onWheel, { passive: false });
       let y0 = null;
+      let s0 = 0;
       window.addEventListener("touchstart", (e) => {
         y0 = e.touches && e.touches[0] ? e.touches[0].clientY : null;
+        const scene = this.liveScene();
+        s0 = scene ? scene.scrollTop : 0;
       }, { passive: true });
       window.addEventListener("touchmove", (e) => {
         if (y0 == null || !e.touches || !e.touches[0]) return;
+        const dy = y0 - e.touches[0].clientY;
+        if (this.sceneCanConsume(dy)) return;
         if (Math.abs(e.touches[0].clientY - y0) > 10) e.preventDefault();
       }, { passive: false });
       window.addEventListener("touchend", (e) => {
         if (y0 == null || !e.changedTouches || !e.changedTouches[0]) return;
         const dy = y0 - e.changedTouches[0].clientY;
         y0 = null;
+        const scene = this.liveScene();
+        if (scene && Math.abs(scene.scrollTop - s0) > 8) return;
         if (Date.now() < this.lockUntil) return;
         if (Math.abs(dy) < 52) return;
         this.go(this.i + (dy > 0 ? 1 : -1), { fly: true });
@@ -124,7 +164,8 @@
     },
 
     nearest() {
-      const mid = innerHeight * 0.5;
+      const top = this.stageH();
+      const mid = top + (this.vh() - top) * 0.5;
       let best = this.i;
       let bestDist = Infinity;
       this.scenes.forEach((el, i) => {
@@ -141,8 +182,10 @@
     progress(el) {
       if (!el) return 1;
       const r = el.getBoundingClientRect();
-      const t0 = innerHeight * 0.82;
-      const t1 = innerHeight * 0.12;
+      const top = this.stageH();
+      const vh = this.vh();
+      const t0 = top + (vh - top) * 0.82;
+      const t1 = top + (vh - top) * 0.12;
       const p = (t0 - r.top) / Math.max(120, t0 - t1);
       return Math.max(0, Math.min(1, p));
     },
@@ -200,7 +243,7 @@
       if (this.scrollRaf) cancelAnimationFrame(this.scrollRaf);
       const start = window.scrollY || document.documentElement.scrollTop || 0;
       const r = el.getBoundingClientRect();
-      const to = Math.max(0, start + r.top);
+      const to = Math.max(0, start + r.top - this.stageH());
       if (!Number.isFinite(to) || Math.abs(to - start) < 1) return;
       if (ms <= 0 || this.reduce()) {
         window.scrollTo(0, to);
@@ -266,6 +309,7 @@
       document.body.dataset.stage = scene.stage || "map";
       document.body.dataset.focus = scene.focus;
       document.body.classList.toggle("is-coda", scene.id === "scene-coda");
+      this.scenes[i].scrollTop = 0;
       if (opts && opts.silent) return;
       const fly = stayHold ? false : (!!(opts && opts.fly) || enterHold);
       const hold = stayHold;
