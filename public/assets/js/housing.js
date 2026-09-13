@@ -56,11 +56,14 @@
         line("housing-live.js missing");
         return;
       }
-      Promise.all([
+      const dataReady = Promise.all([
         d3.json("assets/data/housing/sources.json"),
         HousingLive.loadVirginia(line),
         HousingLive.loadMumbai(line)
-      ]).then(([sources, va, mx]) => {
+      ]);
+      const minDwell = new Promise((resolve) => setTimeout(resolve, 10000));
+      Promise.all([dataReady, minDwell]).then(([loaded]) => {
+        const [sources, va, mx] = loaded;
         this.sources = sources;
         this.va = va;
         this.mx = mx;
