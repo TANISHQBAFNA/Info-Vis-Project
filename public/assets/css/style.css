@@ -1513,6 +1513,33 @@ body.cine-page .mc-tooltip {
   .film-credit { display: none; }
 }
 
+@media (max-width: 1100px) and (orientation: portrait) and (min-height: 900px) {
+  body.cine-page { --cine-map: 44dvh; }
+  .film-stage {
+    height: var(--cine-map);
+    min-height: 340px;
+    max-height: 48dvh;
+  }
+  .film-picture { inset: 40px 10px 12px; }
+  .cine-hero {
+    left: 16px;
+    bottom: 14px;
+    max-width: min(260px, 46%);
+  }
+  .cine-hero-place { font-size: 13px; }
+  .cine-hero-metric { margin-top: 4px; }
+  .cine-hero-value { font-size: clamp(22px, 4vw, 30px); }
+  .cine-scene,
+  .cine-scene.is-fly {
+    min-height: calc(100dvh - 44dvh);
+    max-height: calc(100dvh - 44dvh);
+    scroll-margin-top: 44dvh;
+    padding: 16px 8px max(20px, env(safe-area-inset-bottom));
+  }
+  .cine-scene h2 { font-size: clamp(24px, 4.2vw, 34px); }
+  .cine-inset { height: 112px; }
+}
+
 @media (max-width: 700px) {
   .film-stage {
     height: min(32dvh, 240px);
